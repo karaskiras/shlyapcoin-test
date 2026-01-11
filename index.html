@@ -1,0 +1,864 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>ШляпКоин • Mini App (single-file mobile preview)</title>
+
+  <!-- 3D skin viewer (CDN). Работает и в Telegram, и в обычном браузере. -->
+  <script src="https://unpkg.com/skinview3d@2.1.0/bundles/skinview3d.bundle.js"></script>
+
+  <style>
+    :root{
+      --bg0:#0b0014;
+      --bg1:#130027;
+      --card:#17002e;
+      --card2:#1f003b;
+      --stroke: rgba(255,255,255,.12);
+      --text:#f3e8ff;
+      --muted: rgba(243,232,255,.72);
+      --purple:#b000ff;
+      --purple2:#7a2cff;
+      --good:#36ff8a;
+      --warn:#ffd36a;
+      --bad:#ff4d6d;
+
+      --radius: 18px;
+      --shadow: 0 20px 60px rgba(0,0,0,.45);
+      --pad: 14px;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    *{box-sizing:border-box;}
+    html,body{height:100%;}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Liberation Sans", sans-serif;
+      color:var(--text);
+      background: radial-gradient(1200px 900px at 30% 10%, rgba(176,0,255,.22), transparent 60%),
+                  radial-gradient(900px 700px at 90% 30%, rgba(122,44,255,.18), transparent 55%),
+                  linear-gradient(180deg, var(--bg0), var(--bg1));
+      overflow:hidden;
+    }
+
+    .app{
+      height:100%;
+      display:flex;
+      flex-direction:column;
+      padding-top: calc(var(--safe-top));
+      padding-bottom: calc(var(--safe-bottom));
+    }
+
+    /* Top bar */
+    .topbar{
+      display:grid;
+      grid-template-columns: 42px 1fr auto;
+      align-items:center;
+      gap:10px;
+      padding: 10px 12px;
+    }
+    .logo{
+      width:42px;height:42px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(176,0,255,.9), rgba(122,44,255,.9));
+      box-shadow: 0 12px 28px rgba(176,0,255,.22);
+      display:grid; place-items:center;
+      border: 1px solid rgba(255,255,255,.18);
+      user-select:none;
+      font-weight:900;
+      letter-spacing:.5px;
+    }
+    .title{
+      text-align:center;
+      font-weight: 800;
+      letter-spacing:.2px;
+      font-size: 16px;
+      line-height: 1.1;
+    }
+    .subtitle{
+      display:block;
+      margin-top:2px;
+      font-size:12px;
+      color:var(--muted);
+      font-weight:600;
+    }
+    .balance{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding: 10px 12px;
+      border-radius: 16px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.12);
+      box-shadow: 0 10px 25px rgba(0,0,0,.25);
+      user-select:none;
+    }
+    .coin{
+      width:22px; height:22px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.55), rgba(255,255,255,.08) 45%, rgba(255,255,255,.02)),
+                  radial-gradient(circle at 55% 55%, rgba(176,0,255,.65), rgba(122,44,255,.4));
+      border:1px solid rgba(255,255,255,.25);
+      overflow:hidden;
+      display:grid;place-items:center;
+      font-size:12px;
+      font-weight:900;
+    }
+    .balance b{font-size:14px;}
+    .balance small{color:var(--muted); font-weight:700;}
+
+    /* Pages */
+    .pages{
+      flex:1;
+      position:relative;
+      padding: 8px 12px 12px;
+      overflow:hidden;
+    }
+    .page{
+      position:absolute;
+      inset: 0 12px 12px 12px;
+      opacity:0;
+      transform: translateY(12px);
+      pointer-events:none;
+      transition: opacity .18s ease, transform .18s ease;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+    .page.active{
+      opacity:1;
+      transform: translateY(0);
+      pointer-events:auto;
+    }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: var(--pad);
+      backdrop-filter: blur(8px);
+    }
+
+    /* Home layout */
+    .viewerCard{
+      flex:1;
+      min-height: 360px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+
+    .viewerWrap{
+      position:relative;
+      flex:1;
+      min-height: 280px;
+      border-radius: calc(var(--radius) - 6px);
+      background:
+        radial-gradient(700px 500px at 50% 30%, rgba(176,0,255,.22), transparent 60%),
+        radial-gradient(500px 450px at 80% 70%, rgba(122,44,255,.18), transparent 62%),
+        rgba(0,0,0,.25);
+      border: 1px solid rgba(255,255,255,.10);
+      overflow:hidden;
+    }
+
+    #skinCanvas{
+      width:100%;
+      height:100%;
+      display:block;
+    }
+
+    /* Click overlay */
+    .tapOverlay{
+      position:absolute;
+      inset:0;
+      cursor:pointer;
+      display:flex;
+      align-items:flex-end;
+      justify-content:center;
+      padding-bottom: 10px;
+      user-select:none;
+    }
+
+    .tapHint{
+      background: rgba(0,0,0,.35);
+      border: 1px solid rgba(255,255,255,.14);
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      color: var(--muted);
+      backdrop-filter: blur(8px);
+    }
+
+    .controls{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
+
+    .btn{
+      border:none;
+      border-radius: 16px;
+      padding: 12px 14px;
+      font-weight: 850;
+      color: var(--text);
+      background: linear-gradient(135deg, rgba(176,0,255,.95), rgba(122,44,255,.95));
+      box-shadow: 0 12px 28px rgba(176,0,255,.18);
+      cursor:pointer;
+    }
+    .btn.secondary{
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.12);
+      box-shadow: 0 12px 28px rgba(0,0,0,.25);
+    }
+    .btn:active{transform: translateY(1px);}
+
+    .row{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      flex:1;
+      min-width: 180px;
+    }
+    .field label{
+      font-size:12px;
+      color:var(--muted);
+      font-weight:750;
+    }
+    .field input{
+      width:100%;
+      background: rgba(0,0,0,.28);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 14px;
+      padding: 12px 12px;
+      color: var(--text);
+      outline:none;
+      font-weight:750;
+    }
+
+    /* Wheel */
+    .wheelWrap{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+    .wheelCard{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      align-items:center;
+    }
+    .wheel{
+      width:min(320px, 86vw);
+      aspect-ratio: 1 / 1;
+      border-radius: 999px;
+      background:
+        conic-gradient(
+          rgba(176,0,255,.95) 0 12.5%,
+          rgba(255,255,255,.10) 12.5% 25%,
+          rgba(122,44,255,.95) 25% 37.5%,
+          rgba(255,255,255,.10) 37.5% 50%,
+          rgba(176,0,255,.95) 50% 62.5%,
+          rgba(255,255,255,.10) 62.5% 75%,
+          rgba(122,44,255,.95) 75% 87.5%,
+          rgba(255,255,255,.10) 87.5% 100%
+        );
+      border: 2px solid rgba(255,255,255,.18);
+      box-shadow: 0 30px 80px rgba(0,0,0,.45);
+      position:relative;
+      overflow:hidden;
+    }
+    .wheel::after{
+      content:"";
+      position:absolute;
+      inset: 18%;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.20), rgba(0,0,0,.15));
+      border: 1px solid rgba(255,255,255,.14);
+    }
+    .needle{
+      width:0;height:0;
+      border-left: 14px solid transparent;
+      border-right: 14px solid transparent;
+      border-bottom: 22px solid rgba(255,255,255,.9);
+      filter: drop-shadow(0 10px 12px rgba(0,0,0,.45));
+      margin-top:-6px;
+    }
+    .wheelInfo{
+      width:100%;
+      display:flex;
+      justify-content:space-between;
+      color:var(--muted);
+      font-weight:800;
+      font-size:12px;
+    }
+
+    /* Withdraw */
+    .withdraw{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+    .pill{
+      padding: 10px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.12);
+      color: var(--muted);
+      font-weight:800;
+      font-size:12px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+    }
+    .pill b{color:var(--text)}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
+
+    /* Bottom nav */
+    .nav{
+      display:grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap:10px;
+      padding: 10px 12px calc(10px + var(--safe-bottom));
+      background: linear-gradient(180deg, transparent, rgba(0,0,0,.35));
+      border-top: 1px solid rgba(255,255,255,.10);
+      backdrop-filter: blur(10px);
+    }
+    .tab{
+      border:none;
+      border-radius: 16px;
+      padding: 12px 10px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.12);
+      color: var(--muted);
+      font-weight: 900;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      user-select:none;
+    }
+    .tab.active{
+      color: var(--text);
+      background: linear-gradient(135deg, rgba(176,0,255,.45), rgba(122,44,255,.22));
+      border-color: rgba(176,0,255,.35);
+      box-shadow: 0 14px 40px rgba(176,0,255,.12);
+    }
+    .ico{
+      width:18px;height:18px;
+      display:inline-block;
+      border-radius: 6px;
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.14);
+    }
+    .toast{
+      position:fixed;
+      left:50%;
+      bottom: calc(82px + var(--safe-bottom));
+      transform: translateX(-50%);
+      padding: 10px 12px;
+      border-radius: 999px;
+      background: rgba(0,0,0,.45);
+      border: 1px solid rgba(255,255,255,.14);
+      color: var(--text);
+      font-weight:900;
+      opacity:0;
+      pointer-events:none;
+      transition: opacity .18s ease, transform .18s ease;
+      backdrop-filter: blur(10px);
+    }
+    .toast.show{
+      opacity:1;
+      transform: translateX(-50%) translateY(-4px);
+    }
+    .hint{
+      font-size:12px;
+      color: var(--muted);
+      font-weight:700;
+      line-height:1.35;
+    }
+
+    /* Desktop support */
+    @media (min-width: 900px){
+      body{overflow:auto;}
+      .app{max-width: 980px; margin: 0 auto;}
+      .pages{padding: 12px 18px 18px;}
+      .page{inset: 0 18px 18px 18px;}
+      .viewerCard{min-height: 560px;}
+      .viewerWrap{min-height: 420px;}
+      .wheel{width: min(380px, 55vw);}
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <div class="topbar">
+      <div class="logo" id="logoBtn">Ш</div>
+
+      <div class="title">
+        <span id="playerName">Игрок</span>
+        <span class="subtitle">Minecraft nickname</span>
+      </div>
+
+      <div class="balance" title="Баланс шляпкоинов">
+        <div class="coin" id="coinIcon">🎩</div>
+        <div style="display:flex;flex-direction:column;line-height:1.05">
+          <b id="balanceValue">0</b>
+          <small>шляпкоины</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="pages">
+      <!-- HOME -->
+      <section class="page active" id="page-home">
+        <div class="card viewerCard">
+          <div class="row">
+            <div class="field">
+              <label>Никнейм (для теста)</label>
+              <input id="nickInput" placeholder="Например: KarasKiras" autocomplete="off" />
+            </div>
+            <button class="btn secondary" id="loadNickBtn" style="white-space:nowrap">Загрузить</button>
+          </div>
+
+          <div class="row">
+            <div class="pill" style="flex:0 0 auto">
+              <span>Тип рук</span>
+              <b id="modelText">—</b>
+            </div>
+            <div class="hint" id="skinStatus" style="flex:1">
+              Скин берём по нику: если доступен серверный /api/profile — используем его, иначе пробуем публичный CDN. Без привязки.
+            </div>
+          </div>
+
+          <div class="viewerWrap">
+            <canvas id="skinCanvas"></canvas>
+            <div class="tapOverlay" id="tapOverlay">
+              <div class="tapHint">Нажми на персонажа: +2 шляпкоина</div>
+            </div>
+          </div>
+
+          <div class="controls">
+            <button class="btn" id="uploadSkinBtn">Загрузить скин (PNG)</button>
+            <button class="btn secondary" id="resetBtn">Сбросить тест</button>
+          </div>
+
+          <div class="hint">
+            Сейчас: баланс и таймер колеса хранятся в <b>localStorage</b>.
+            Позже: перенесём это на сервер и привяжем к Telegram userId (и к Minecraft-серверу для вывода).
+          </div>
+        </div>
+      </section>
+
+      <!-- WHEEL -->
+      <section class="page" id="page-wheel">
+        <div class="card wheelCard">
+          <div class="needle"></div>
+          <div class="wheel" id="wheel"></div>
+
+          <div class="wheelInfo">
+            <span id="cooldownText">Готово!</span>
+            <span>Раз в 12 часов</span>
+          </div>
+
+          <button class="btn" id="spinBtn" style="width:min(320px,86vw)">КРУТИТЬ</button>
+          <div class="hint" style="text-align:center">
+            Награда выдаётся сразу. В реальной версии можно сделать красивую анимацию и таблицу шансов.
+          </div>
+        </div>
+      </section>
+
+      <!-- WITHDRAW -->
+      <section class="page" id="page-withdraw">
+        <div class="card withdraw">
+          <div class="pill">
+            <span>Статус связи с сервером</span>
+            <b>ТЕСТ / НЕ ПОДКЛЮЧЕНО</b>
+          </div>
+
+          <div class="pill">
+            <span>Код привязки</span>
+            <b class="mono" id="bindCode">------</b>
+          </div>
+
+          <div class="controls">
+            <button class="btn" id="genCodeBtn">Сгенерировать код</button>
+            <button class="btn secondary" id="copyCodeBtn">Скопировать</button>
+          </div>
+
+          <div class="card" style="margin-top:2px;background:rgba(255,255,255,.05)">
+            <div style="font-weight:900;margin-bottom:6px">Как это будет работать позже</div>
+            <div class="hint">
+              1) В Mini App нажимаешь «Сгенерировать код»<br/>
+              2) На сервере пишешь: <span class="mono">/tg link 123456</span><br/>
+              3) Плагин привязывает Minecraft UUID к Telegram userId<br/>
+              4) После этого можно «выводить» шляпкоины в валюту сервера
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <nav class="nav">
+      <button class="tab" data-tab="wheel"><span class="ico"></span>Колесо</button>
+      <button class="tab active" data-tab="home"><span class="ico"></span>Дом</button>
+      <button class="tab" data-tab="withdraw"><span class="ico"></span>Вывод</button>
+    </nav>
+  </div>
+
+  <div class="toast" id="toast">+2</div>
+
+  <input type="file" id="skinFile" accept="image/png" hidden />
+
+  <script>
+    // ===== Telegram WebApp hook (optional) =====
+    const tg = window.Telegram?.WebApp;
+    try {
+      tg?.ready();
+      tg?.expand();
+    } catch {}
+
+    // ===== State (local prototype) =====
+    const LS_KEY = "shlyapcoin_proto_v1";
+    const state = loadState();
+
+    const $ = (id) => document.getElementById(id);
+
+    const elBalance = $("balanceValue");
+    const elPlayer = $("playerName");
+    const elNickInput = $("nickInput");
+    const toast = $("toast");
+
+    // ===== 3D Viewer =====
+    let viewer;
+    initViewer();
+
+    function initViewer(){
+      const canvas = $("skinCanvas");
+      viewer = new skinview3d.SkinViewer({
+        canvas,
+        width: canvas.clientWidth || 300,
+        height: canvas.clientHeight || 320,
+        skin: null
+      });
+
+      // look & feel
+      viewer.fov = 65;
+      viewer.zoom = 0.95;
+      viewer.animation = new skinview3d.WalkingAnimation();
+      viewer.animation.speed = 0.6;
+
+      // Resize on window
+      const ro = new ResizeObserver(() => {
+        viewer.width = canvas.clientWidth;
+        viewer.height = canvas.clientHeight;
+      });
+      ro.observe(canvas);
+
+      // If we have a saved uploaded skin, restore it.
+      // Otherwise try to restore by nickname.
+      if (state.skinDataUrl){
+        viewer.loadSkin(state.skinDataUrl);
+      } else {
+        viewer.loadSkin(makePlaceholderSkinDataUrl());
+        if (state.nickname) {
+          // best-effort restore
+          setTimeout(() => loadSkinByNickname(state.nickname), 150);
+        }
+      }
+    }
+
+    function makePlaceholderSkinDataUrl(){
+      // Generates a simple 64x64 PNG in-memory
+      const c = document.createElement("canvas");
+      c.width = 64; c.height = 64;
+      const ctx = c.getContext("2d");
+      ctx.fillStyle = "#2a004d"; ctx.fillRect(0,0,64,64);
+      ctx.fillStyle = "#b000ff"; ctx.fillRect(8,8,16,16);
+      ctx.fillStyle = "#7a2cff"; ctx.fillRect(40,8,16,16);
+      ctx.fillStyle = "#ffffff22"; ctx.fillRect(0,32,64,32);
+      return c.toDataURL("image/png");
+    }
+
+    // ===== UI init =====
+    setPlayerName(state.nickname || "Игрок");
+    setBalance(state.balance || 0);
+    updateCooldownUI();
+
+    // Restore nick / auto-load skin (if user didn't upload a custom file)
+    if (state.nickname) {
+      elNickInput.value = state.nickname;
+    }
+    if (!state.skinDataUrl && state.nickname) {
+      // Small delay so viewer sizes settle
+      setTimeout(() => loadSkinByNickname(state.nickname), 150);
+    } else {
+      // If skin loaded from file or placeholder
+      try { $("skinStatus").textContent = state.skinDataUrl ? "Скин загружен из файла (PNG)." : "Введи ник и нажми «Загрузить»."; } catch {}
+      try { $("modelText").textContent = state.skinDataUrl ? "—" : "—"; } catch {}
+    }
+
+    // ===== Click-to-earn =====
+    let lastTapMs = 0;
+    $("tapOverlay").addEventListener("click", () => {
+      const now = Date.now();
+      if (now - lastTapMs < 1000) return; // simple anti-spam: 1 click/sec
+      lastTapMs = now;
+
+      state.balance += 2;
+      saveState();
+      setBalance(state.balance);
+      showToast("+2 🎩");
+    });
+
+    // ===== Nick load (server /api/profile if available, otherwise CDN fallback) =====
+    $("loadNickBtn").addEventListener("click", async () => {
+      const nick = (elNickInput.value || "").trim();
+      if (!nick) return showToast("Введи ник");
+      await loadSkinByNickname(nick);
+    });
+
+    async function loadSkinByNickname(nick){
+      setPlayerName(nick);
+
+      const status = $("skinStatus");
+      const modelText = $("modelText");
+      status.textContent = "Загружаю скин…";
+      modelText.textContent = "…";
+
+      // 1) Try local backend first (best option: same-origin, no CORS issues)
+      try{
+        const apiUrl = `/api/profile?name=${encodeURIComponent(nick)}`;
+        const r = await fetchWithTimeout(apiUrl, 2000);
+        const j = await r.json();
+        if (!j.ok) throw new Error(j.error || "Ошибка");
+
+        const prettyModel = j.model === "slim" ? "Slim (Alex)" : "Wide (Steve)";
+        modelText.textContent = prettyModel;
+        status.textContent = `Скин: ${j.name} • ${prettyModel} (через /api/profile)`;
+
+        // Add cache-buster so skin updates reflect
+        const skinUrl = `${j.skinProxyUrl}&v=${Date.now()}`;
+        viewer.loadSkin(skinUrl);
+
+        state.nickname = j.name;
+        saveState();
+        showToast("Скин загружен");
+        return;
+      }catch(e){
+        // Ignore: we will try CDN fallback
+        console.warn("/api/profile unavailable, falling back to CDN", e);
+      }
+
+      // 2) CDN fallback (works without running server.js)
+      try{
+        // Minotar returns a valid Minecraft skin PNG by nickname.
+        // Note: If a browser blocks cross-origin textures, run this page via any HTTP server.
+        const skinUrl = `https://minotar.net/skin/${encodeURIComponent(nick)}.png?v=${Date.now()}`;
+        viewer.loadSkin(skinUrl);
+
+        modelText.textContent = "—";
+        status.textContent = `Скин: ${nick} (через CDN)`;
+
+        state.nickname = nick;
+        state.skinDataUrl = ""; // clear custom upload if user switched to nickname
+        saveState();
+        showToast("Скин загружен");
+      }catch(e){
+        console.warn(e);
+        status.textContent = "Не смог загрузить по нику. Попробуй открыть файл через хостинг (http) или загрузить PNG.";
+        modelText.textContent = "—";
+        showToast("Не вышло 😅");
+      }
+    }
+
+    function fetchWithTimeout(url, ms){
+      const controller = new AbortController();
+      const t = setTimeout(() => controller.abort(), ms);
+      return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(t));
+    }
+
+    // ===== Upload skin (PNG) =====
+    $("uploadSkinBtn").addEventListener("click", () => $("skinFile").click());
+    $("skinFile").addEventListener("change", async (ev) => {
+      const f = ev.target.files?.[0];
+      if (!f) return;
+      if (f.type !== "image/png") return showToast("Нужен PNG");
+      const dataUrl = await fileToDataUrl(f);
+      state.skinDataUrl = dataUrl;
+      saveState();
+      viewer.loadSkin(dataUrl);
+      showToast("Ок!");
+      ev.target.value = "";
+    });
+
+    function fileToDataUrl(file){
+      return new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(r.result);
+        r.onerror = reject;
+        r.readAsDataURL(file);
+      });
+    }
+
+    // ===== Reset =====
+    $("resetBtn").addEventListener("click", () => {
+      localStorage.removeItem(LS_KEY);
+      location.reload();
+    });
+
+    // ===== Wheel =====
+    const SPIN_CD_MS = 12 * 60 * 60 * 1000;
+    let spinning = false;
+
+    $("spinBtn").addEventListener("click", () => {
+      if (spinning) return;
+      const now = Date.now();
+      const left = (state.lastSpinMs + SPIN_CD_MS) - now;
+      if (left > 0) {
+        showToast("Ещё рано 😄");
+        return;
+      }
+
+      // Prize table (простая)
+      const prize = rollPrize();
+      state.balance += prize;
+      state.lastSpinMs = now;
+      saveState();
+      setBalance(state.balance);
+
+      spinAnim(prize);
+    });
+
+    function rollPrize(){
+      // Шансы можно легко менять:
+      // 0-59: 10
+      // 60-84: 25
+      // 85-94: 50
+      // 95-98: 100
+      // 99: 0
+      const r = Math.floor(Math.random()*100);
+      if (r <= 59) return 10;
+      if (r <= 84) return 25;
+      if (r <= 94) return 50;
+      if (r <= 98) return 100;
+      return 0;
+    }
+
+    function spinAnim(prize){
+      spinning = true;
+      const wheel = $("wheel");
+      const turns = 6 + Math.random()*3;
+      const deg = turns * 360 + (Math.random()*360);
+      wheel.style.transition = "transform 1.8s cubic-bezier(.12,.76,.18,1)";
+      wheel.style.transform = `rotate(${deg}deg)`;
+      setTimeout(() => {
+        spinning = false;
+        showToast(prize === 0 ? "0 😭" : `+${prize} 🎩`);
+        updateCooldownUI();
+      }, 1850);
+    }
+
+    // ===== Withdraw: bind code =====
+    $("genCodeBtn").addEventListener("click", () => {
+      const code = String(Math.floor(100000 + Math.random()*900000));
+      state.bindCode = code;
+      saveState();
+      $("bindCode").textContent = code;
+      showToast("Код готов");
+    });
+
+    $("copyCodeBtn").addEventListener("click", async () => {
+      const code = state.bindCode || "------";
+      try{
+        await navigator.clipboard.writeText(code);
+        showToast("Скопировано");
+      }catch{
+        showToast("Не смог скопировать");
+      }
+    });
+
+    $("bindCode").textContent = state.bindCode || "------";
+
+    // ===== Navigation =====
+    const tabs = Array.from(document.querySelectorAll(".tab"));
+    tabs.forEach(btn => btn.addEventListener("click", () => {
+      const target = btn.dataset.tab;
+      setTab(target);
+    }));
+
+    function setTab(name){
+      tabs.forEach(b => b.classList.toggle("active", b.dataset.tab === name));
+      document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+      $("page-" + name).classList.add("active");
+      if (name === "wheel") updateCooldownUI();
+    }
+
+    // ===== Helpers =====
+    function setBalance(v){
+      elBalance.textContent = String(v);
+    }
+    function setPlayerName(nick){
+      elPlayer.textContent = nick;
+      state.nickname = nick;
+      saveState();
+    }
+    function showToast(text){
+      toast.textContent = text;
+      toast.classList.add("show");
+      setTimeout(() => toast.classList.remove("show"), 950);
+    }
+
+    function updateCooldownUI(){
+      const now = Date.now();
+      const left = (state.lastSpinMs + SPIN_CD_MS) - now;
+      const el = $("cooldownText");
+      if (left <= 0){
+        el.textContent = "Можно крутить!";
+        $("spinBtn").disabled = false;
+        $("spinBtn").style.opacity = "1";
+        return;
+      }
+      const hh = Math.floor(left / 3600000);
+      const mm = Math.floor((left % 3600000) / 60000);
+      const ss = Math.floor((left % 60000) / 1000);
+      el.textContent = `Осталось: ${String(hh).padStart(2,"0")}:${String(mm).padStart(2,"0")}:${String(ss).padStart(2,"0")}`;
+      $("spinBtn").disabled = true;
+      $("spinBtn").style.opacity = ".65";
+      setTimeout(updateCooldownUI, 1000);
+    }
+
+    function loadState(){
+      try{
+        const raw = localStorage.getItem(LS_KEY);
+        if (!raw) return { balance: 0, nickname: "", skinDataUrl: "", lastSpinMs: 0, bindCode: "" };
+        const s = JSON.parse(raw);
+        return {
+          balance: Number(s.balance || 0),
+          nickname: String(s.nickname || ""),
+          skinDataUrl: String(s.skinDataUrl || ""),
+          lastSpinMs: Number(s.lastSpinMs || 0),
+          bindCode: String(s.bindCode || "")
+        };
+      }catch{
+        return { balance: 0, nickname: "", skinDataUrl: "", lastSpinMs: 0, bindCode: "" };
+      }
+    }
+
+    function saveState(){
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    }
+  </script>
+</body>
+</html>
