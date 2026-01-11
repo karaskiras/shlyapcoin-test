@@ -2,1388 +2,1825 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>ШляпКоин • Mini App (v0.3)</title>
-
-  <!-- Skin viewer loader with CDN fallback -->
-  <script>
-    (function(){
-      const urls = [
-        "https://cdn.jsdelivr.net/npm/skinview3d@3.4.1/bundles/skinview3d.bundle.js",
-        "https://unpkg.com/skinview3d@3.4.1/bundles/skinview3d.bundle.js"
-      ];
-      let i = 0;
-      function loadNext(){
-        if(i >= urls.length){
-          console.error("skinview3d failed to load from CDNs");
-          window.__skinview3d_failed = true;
-          return;
-        }
-        const s = document.createElement("script");
-        s.src = urls[i++];
-        s.async = true;
-        s.onload = () => { window.__skinview3d_loaded = true; };
-        s.onerror = loadNext;
-        document.head.appendChild(s);
-      }
-      loadNext();
-    })();
-  </script>
-
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ЩляпКоин — Mini App (тест)</title>
   <style>
-    :root{
-      --bg0:#0b0014;
-      --bg1:#130027;
-      --card:#17002e;
-      --stroke: rgba(255,255,255,.12);
-      --text:#f3e8ff;
-      --muted: rgba(243,232,255,.72);
-      --purple:#b000ff;
-      --purple2:#7a2cff;
-      --good:#36ff8a;
-      --warn:#ffd36a;
-      --bad:#ff4d6d;
+:root{
+  --bg0:#05020B;
+  --bg1:#12031F;
+  --card: rgba(20, 10, 30, 0.68);
+  --card2: rgba(30, 12, 48, 0.72);
+  --stroke: rgba(255,255,255,0.10);
+  --stroke2: rgba(255,255,255,0.16);
+  --text:#F3EDFF;
+  --muted: rgba(243, 237, 255, 0.65);
+  --accent:#B24CFF;
+  --accent2:#6E2BFF;
+  --good:#59FFB0;
+  --warn:#FFD36E;
+  --bad:#FF5C8A;
+  --shadow: 0 20px 60px rgba(0,0,0,0.55);
+  --radius: 18px;
+  --radius2: 26px;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
 
-      --radius: 18px;
-      --shadow: 0 20px 60px rgba(0,0,0,.45);
-      --pad: 14px;
-      --safe-top: env(safe-area-inset-top, 0px);
-      --safe-bottom: env(safe-area-inset-bottom, 0px);
-    }
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
+body{
+  margin:0;
+  color:var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif;
+  background: radial-gradient(900px 600px at 50% -10%, rgba(178,76,255,0.28), transparent 65%),
+              radial-gradient(900px 700px at 110% 20%, rgba(110,43,255,0.18), transparent 55%),
+              radial-gradient(700px 600px at -10% 40%, rgba(178,76,255,0.16), transparent 55%),
+              linear-gradient(180deg, var(--bg1), var(--bg0));
+  overflow-x:hidden;
+}
 
-    *{box-sizing:border-box;}
-    html,body{height:100%;}
-    body{
-      margin:0;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Liberation Sans", sans-serif;
-      color:var(--text);
-      background: radial-gradient(1200px 900px at 30% 10%, rgba(176,0,255,.22), transparent 60%),
-                  radial-gradient(900px 700px at 90% 30%, rgba(122,44,255,.18), transparent 55%),
-                  linear-gradient(180deg, var(--bg0), var(--bg1));
-      overflow:hidden;
-    }
+/* Animated background canvas */
+#bgParticles{
+  position:fixed;
+  inset:0;
+  width:100%;
+  height:100%;
+  z-index:0;
+  opacity:0.65;
+}
 
-    .app{
-      height:100%;
-      display:flex;
-      flex-direction:column;
-      padding-top: calc(var(--safe-top));
-      padding-bottom: calc(var(--safe-bottom));
-    }
+.app{
+  position:relative;
+  z-index:1;
+  min-height:100%;
+  display:flex;
+  flex-direction:column;
+}
 
-    /* Top bar */
-    .topbar{
-      display:grid;
-      grid-template-columns: 42px 1fr auto;
-      align-items:center;
-      gap:10px;
-      padding: 10px 12px;
-    }
-    .logo{
-      width:42px;height:42px;
-      border-radius: 14px;
-      background: linear-gradient(135deg, rgba(176,0,255,.9), rgba(122,44,255,.9));
-      box-shadow: 0 12px 28px rgba(176,0,255,.22);
-      display:grid; place-items:center;
-      border: 1px solid rgba(255,255,255,.18);
-      user-select:none;
-      font-weight:900;
-      letter-spacing:.5px;
-    }
-    .title{
-      text-align:center;
-      font-weight: 800;
-      letter-spacing:.2px;
-      font-size: 16px;
-      line-height: 1.1;
-    }
-    .subtitle{
-      display:block;
-      margin-top:2px;
-      font-size:12px;
-      color:var(--muted);
-      font-weight:600;
-    }
-    .balance{
-      display:flex;
-      align-items:center;
-      gap:8px;
-      padding: 10px 12px;
-      border-radius: 16px;
-      background: rgba(255,255,255,.06);
-      border: 1px solid rgba(255,255,255,.12);
-      box-shadow: 0 10px 25px rgba(0,0,0,.25);
-      user-select:none;
-    }
-    .coin{
-      width:22px; height:22px;
-      border-radius: 999px;
-      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.55), rgba(255,255,255,.08) 45%, rgba(255,255,255,.02)),
-                  radial-gradient(circle at 55% 55%, rgba(176,0,255,.65), rgba(122,44,255,.4));
-      border:1px solid rgba(255,255,255,.25);
-      overflow:hidden;
-      display:grid;place-items:center;
-      font-size:12px;
-      font-weight:900;
-    }
-    .balance b{font-size:14px;}
-    .balance small{color:var(--muted); font-weight:700;}
+.topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:14px 14px 10px 14px;
+  border-bottom:1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(12px);
+}
 
-    /* Pages */
-    .pages{
-      flex:1;
-      position:relative;
-      padding: 8px 12px 12px;
-      overflow:hidden;
-    }
-    .page{
-      position:absolute;
-      inset: 0 12px 12px 12px;
-      opacity:0;
-      transform: translateY(12px);
-      pointer-events:none;
-      transition: opacity .18s ease, transform .18s ease;
-      display:flex;
-      flex-direction:column;
-      gap:12px;
-    }
-    .page.active{
-      opacity:1;
-      transform: translateY(0);
-      pointer-events:auto;
-    }
+.brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+}
+.brand-logo{
+  width:42px;
+  height:42px;
+  border-radius:14px;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.10), 0 18px 40px rgba(178,76,255,0.20);
+}
+.brand-text{ min-width:0; }
+.brand-title{
+  font-weight:800;
+  letter-spacing:0.3px;
+  font-size:16px;
+  line-height:1.05;
+}
+.brand-sub{
+  font-size:12px;
+  color:var(--muted);
+  margin-top:3px;
+}
 
-    .card{
-      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
-      border: 1px solid rgba(255,255,255,.12);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: var(--pad);
-      backdrop-filter: blur(8px);
-    }
+.balance{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 12px;
+  border-radius:16px;
+  background: linear-gradient(180deg, rgba(30,12,48,0.55), rgba(10,6,20,0.55));
+  border:1px solid rgba(255,255,255,0.10);
+  box-shadow: var(--shadow);
+}
+.coin-ico{
+  width:30px;
+  height:30px;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 10px 20px rgba(0,0,0,0.45));
+}
+.balance-num{
+  font-weight:900;
+  font-size:18px;
+  line-height:1.0;
+}
+.balance-cap{
+  font-size:12px;
+  color:var(--muted);
+  margin-top:2px;
+}
 
-    /* Home layout */
-    .viewerCard{
-      flex:1;
-      min-height: 380px;
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-    }
+.shell{
+  display:flex;
+  gap:14px;
+  padding:14px;
+  flex:1;
+  align-items:stretch;
+}
 
-    .viewerWrap{
-      position:relative;
-      flex:1;
-      min-height: 260px;
-      border-radius: calc(var(--radius) - 6px);
-      background:
-        radial-gradient(700px 500px at 50% 30%, rgba(176,0,255,.22), transparent 60%),
-        radial-gradient(500px 450px at 80% 70%, rgba(122,44,255,.18), transparent 62%),
-        rgba(0,0,0,.25);
-      border: 1px solid rgba(255,255,255,.10);
-      overflow:hidden;
-    }
+.sidebar{
+  width:230px;
+  padding:12px;
+  border-radius: var(--radius2);
+  background: linear-gradient(180deg, rgba(30,12,48,0.62), rgba(10,6,20,0.62));
+  border:1px solid rgba(255,255,255,0.10);
+  box-shadow: var(--shadow);
+  display:none;
+  flex-direction:column;
+  gap:10px;
+}
+.nav-item{
+  cursor:pointer;
+  text-align:left;
+  border:1px solid rgba(255,255,255,0.08);
+  background: rgba(0,0,0,0.10);
+  color:var(--text);
+  padding:12px 12px;
+  border-radius:16px;
+  font-weight:700;
+  transition: transform .08s ease, background .18s ease, border-color .18s ease;
+}
+.nav-item:hover{ transform: translateY(-1px); border-color: rgba(255,255,255,0.14); }
+.nav-item.is-active{
+  background: radial-gradient(120% 120% at 20% 10%, rgba(178,76,255,0.45), rgba(0,0,0,0.10));
+  border-color: rgba(178,76,255,0.35);
+  box-shadow: 0 0 0 1px rgba(178,76,255,0.10), 0 18px 40px rgba(178,76,255,0.18);
+}
+.nav-sep{ height:1px; background: rgba(255,255,255,0.08); margin:2px 4px; }
 
-    #skinCanvas{
-      width:100%;
-      height:100%;
-      display:block;
-      touch-action: none; /* allow pan/rotate inside viewer */
-    }
+.main{
+  flex:1;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
 
-    .tapOverlay{
-      position:absolute;
-      inset:0;
-      cursor:pointer;
-      display:flex;
-      align-items:flex-end;
-      justify-content:center;
-      padding-bottom: 10px;
-      user-select:none;
-    }
-    .tapHint{
-      background: rgba(0,0,0,.35);
-      border: 1px solid rgba(255,255,255,.14);
-      padding: 8px 12px;
-      border-radius: 999px;
-      font-size: 12px;
-      color: var(--muted);
-      backdrop-filter: blur(8px);
-    }
+.page{ display:none; }
+.page.is-active{ display:block; }
 
-    .controls{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap:10px;
-    }
+.card{
+  border-radius: var(--radius2);
+  background: linear-gradient(180deg, rgba(30,12,48,0.58), rgba(10,6,20,0.58));
+  border:1px solid rgba(255,255,255,0.10);
+  box-shadow: var(--shadow);
+  padding:14px;
+}
+.card-title{
+  font-weight:900;
+  letter-spacing:0.2px;
+  margin-bottom:10px;
+}
 
-    .btn{
-      border:none;
-      border-radius: 16px;
-      padding: 12px 14px;
-      font-weight: 850;
-      color: var(--text);
-      background: linear-gradient(135deg, rgba(176,0,255,.95), rgba(122,44,255,.95));
-      box-shadow: 0 12px 28px rgba(176,0,255,.18);
-      cursor:pointer;
-    }
-    .btn.secondary{
-      background: rgba(255,255,255,.08);
-      border: 1px solid rgba(255,255,255,.12);
-      box-shadow: 0 12px 28px rgba(0,0,0,.25);
-    }
-    .btn.ghost{
-      background: transparent;
-      border: 1px solid rgba(255,255,255,.14);
-      box-shadow: none;
-    }
-    .btn:active{transform: translateY(1px);}
-    .btn[disabled]{
-      opacity:.65;
-      cursor:not-allowed;
-      transform:none;
-    }
+.grid{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap:14px;
+}
+.home-grid{
+  grid-template-columns: 1fr;
+}
 
-    .row{
-      display:flex;
-      gap:10px;
-      align-items:center;
-      flex-wrap:wrap;
-    }
+.row{
+  display:flex;
+  align-items:flex-end;
+  gap:10px;
+}
+.space-between{ justify-content:space-between; align-items:center; }
+.grow{ flex:1; min-width:0; }
 
-    .field{
-      display:flex;
-      flex-direction:column;
-      gap:6px;
-      flex:1;
-      min-width: 180px;
-    }
-    .field label{
-      font-size:12px;
-      color:var(--muted);
-      font-weight:750;
-    }
-    .field input, .field select{
-      width:100%;
-      background: rgba(0,0,0,.28);
-      border: 1px solid rgba(255,255,255,.12);
-      border-radius: 14px;
-      padding: 12px 12px;
-      color: var(--text);
-      outline:none;
-      font-weight:750;
-    }
-    .field select{appearance:none;}
+.field label{
+  display:block;
+  font-size:12px;
+  color:var(--muted);
+  margin-bottom:6px;
+}
 
-    .pill{
-      padding: 10px 12px;
-      border-radius: 999px;
-      background: rgba(255,255,255,.06);
-      border: 1px solid rgba(255,255,255,.12);
-      color: var(--muted);
-      font-weight:800;
-      font-size:12px;
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:10px;
-    }
-    .pill b{color:var(--text)}
-    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
+.input{
+  width:100%;
+  padding:12px 12px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,0.10);
+  background: rgba(0,0,0,0.18);
+  color:var(--text);
+  outline:none;
+}
+.input:focus{ border-color: rgba(178,76,255,0.45); box-shadow: 0 0 0 3px rgba(178,76,255,0.18); }
 
-    .hint{
-      font-size:12px;
-      color: var(--muted);
-      font-weight:700;
-      line-height:1.35;
-    }
+.btn{
+  cursor:pointer;
+  user-select:none;
+  border:1px solid rgba(255,255,255,0.12);
+  background: radial-gradient(120% 120% at 20% 10%, rgba(178,76,255,0.48), rgba(0,0,0,0.12));
+  color:var(--text);
+  font-weight:900;
+  padding:12px 14px;
+  border-radius:16px;
+  transition: transform .08s ease, filter .15s ease;
+}
+.btn:hover{ transform: translateY(-1px); filter: brightness(1.05); }
+.btn:active{ transform: translateY(0px) scale(0.99); }
 
-    /* Wheel */
-    .wheelCard{
-      display:flex;
-      flex-direction:column;
-      gap:12px;
-      align-items:center;
-    }
-    .wheel{
-      width:min(320px, 86vw);
-      aspect-ratio: 1 / 1;
-      border-radius: 999px;
-      background:
-        conic-gradient(
-          rgba(176,0,255,.95) 0 12.5%,
-          rgba(255,255,255,.10) 12.5% 25%,
-          rgba(122,44,255,.95) 25% 37.5%,
-          rgba(255,255,255,.10) 37.5% 50%,
-          rgba(176,0,255,.95) 50% 62.5%,
-          rgba(255,255,255,.10) 62.5% 75%,
-          rgba(122,44,255,.95) 75% 87.5%,
-          rgba(255,255,255,.10) 87.5% 100%
-        );
-      border: 2px solid rgba(255,255,255,.18);
-      box-shadow: 0 30px 80px rgba(0,0,0,.45);
-      position:relative;
-      overflow:hidden;
-      touch-action: none; /* we handle drag */
-    }
-    .wheel::after{
-      content:"";
-      position:absolute;
-      inset: 18%;
-      border-radius: 999px;
-      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.20), rgba(0,0,0,.15));
-      border: 1px solid rgba(255,255,255,.14);
-    }
-    .wheelLabel{
-      position:absolute;
-      inset: 0;
-      display:grid;
-      place-items:center;
-      text-align:center;
-      padding: 18%;
-      color: rgba(243,232,255,.85);
-      font-weight: 950;
-      letter-spacing:.2px;
-      text-shadow: 0 10px 25px rgba(0,0,0,.55);
-      pointer-events:none;
-    }
-    .needle{
-      width:0;height:0;
-      border-left: 14px solid transparent;
-      border-right: 14px solid transparent;
-      border-bottom: 22px solid rgba(255,255,255,.92);
-      filter: drop-shadow(0 10px 12px rgba(0,0,0,.45));
-      margin-top:-6px;
-    }
-    .wheelInfo{
-      width:100%;
-      display:flex;
-      justify-content:space-between;
-      color:var(--muted);
-      font-weight:800;
-      font-size:12px;
-    }
+.btn-soft{
+  background: rgba(0,0,0,0.16);
+  font-weight:800;
+}
 
-    /* Withdraw */
-    .withdraw{
-      display:flex;
-      flex-direction:column;
-      gap:12px;
-    }
-    .list{
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-    }
-    .item{
-      padding: 12px;
-      border-radius: 16px;
-      background: rgba(255,255,255,.05);
-      border: 1px solid rgba(255,255,255,.10);
-    }
-    .itemTop{
-      display:flex;
-      justify-content:space-between;
-      gap:10px;
-      align-items:center;
-      margin-bottom:6px;
-      font-weight:900;
-    }
-    .tag{
-      font-size:12px;
-      font-weight:950;
-      padding: 6px 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,.12);
-      background: rgba(0,0,0,.25);
-      color: rgba(243,232,255,.85);
-      white-space:nowrap;
-    }
-    .tag.good{border-color: rgba(54,255,138,.35); background: rgba(54,255,138,.10); color: rgba(54,255,138,.95);}
-    .tag.warn{border-color: rgba(255,211,106,.35); background: rgba(255,211,106,.10); color: rgba(255,211,106,.95);}
-    .tag.bad{border-color: rgba(255,77,109,.35); background: rgba(255,77,109,.10); color: rgba(255,77,109,.95);}
+.hint{
+  font-size:12px;
+  color:var(--muted);
+}
+.divider{
+  height:1px;
+  background: rgba(255,255,255,0.08);
+  margin:12px 2px;
+}
+.note{
+  margin-top:10px;
+  font-size:12px;
+  color:rgba(243,237,255,0.56);
+}
 
-    /* Bottom nav */
-    .nav{
-      display:grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap:10px;
-      padding: 10px 12px calc(10px + var(--safe-bottom));
-      background: linear-gradient(180deg, transparent, rgba(0,0,0,.35));
-      border-top: 1px solid rgba(255,255,255,.10);
-      backdrop-filter: blur(10px);
-    }
-    .tab{
-      border:none;
-      border-radius: 16px;
-      padding: 12px 10px;
-      background: rgba(255,255,255,.06);
-      border: 1px solid rgba(255,255,255,.12);
-      color: var(--muted);
-      font-weight: 900;
-      cursor:pointer;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      gap:8px;
-      user-select:none;
-    }
-    .tab.active{
-      color: var(--text);
-      background: linear-gradient(135deg, rgba(176,0,255,.45), rgba(122,44,255,.22));
-      border-color: rgba(176,0,255,.35);
-      box-shadow: 0 14px 40px rgba(176,0,255,.12);
-    }
-    .ico{
-      width:18px;height:18px;
-      display:inline-grid;
-      place-items:center;
-      border-radius: 7px;
-      background: rgba(255,255,255,.10);
-      border: 1px solid rgba(255,255,255,.14);
-      font-size:12px;
-      line-height:1;
-    }
-    .toast{
-      position:fixed;
-      left:50%;
-      bottom: calc(82px + var(--safe-bottom));
-      transform: translateX(-50%);
-      padding: 10px 12px;
-      border-radius: 999px;
-      background: rgba(0,0,0,.45);
-      border: 1px solid rgba(255,255,255,.14);
-      color: var(--text);
-      font-weight:900;
-      opacity:0;
-      pointer-events:none;
-      transition: opacity .18s ease, transform .18s ease;
-      backdrop-filter: blur(10px);
-    }
-    .toast.show{
-      opacity:1;
-      transform: translateX(-50%) translateY(-4px);
-    }
+.head-card{ overflow:hidden; }
+.head-wrap{
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  height:430px;
+}
+.halo{
+  position:absolute;
+  width:320px;
+  height:320px;
+  border-radius:999px;
+  background: radial-gradient(circle at 35% 25%, rgba(178,76,255,0.42), rgba(110,43,255,0.18) 55%, transparent 70%);
+  filter: blur(1px);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 40px 90px rgba(178,76,255,0.18);
+}
+#skin3d{
+  width:360px;
+  height:360px;
+  border-radius:999px;
+  background: radial-gradient(circle at 50% 60%, rgba(0,0,0,0.12), rgba(0,0,0,0.42));
+  border:1px solid rgba(255,255,255,0.10);
+  box-shadow: 0 30px 90px rgba(0,0,0,0.55);
+  animation: float 3.2s ease-in-out infinite;
+}
+@keyframes float{
+  0%,100%{ transform: translateY(0px); }
+  50%{ transform: translateY(-10px); }
+}
+.click-hint{
+  margin-top:6px;
+  text-align:center;
+}
+.mini-hint{
+  margin-top:2px;
+  text-align:center;
+  font-size:12px;
+  color:var(--muted);
+}
 
-    /* Desktop support */
-    @media (min-width: 900px){
-      body{overflow:auto;}
-      .app{max-width: 980px; margin: 0 auto;}
-      .pages{padding: 12px 18px 18px;}
-      .page{inset: 0 18px 18px 18px;}
-      .viewerCard{min-height: 580px;}
-      .viewerWrap{min-height: 420px;}
-      .wheel{width: min(380px, 55vw);}
-    }
-  </style>
+/* Wheel */
+.wheel-area{
+  display:flex;
+  justify-content:center;
+  padding:18px 0 12px;
+}
+.wheel{
+  width:280px;
+  height:280px;
+  border-radius:999px;
+  background:
+    conic-gradient(
+      rgba(178,76,255,0.75) 0deg 40deg,
+      rgba(110,43,255,0.65) 40deg 90deg,
+      rgba(178,76,255,0.55) 90deg 140deg,
+      rgba(110,43,255,0.55) 140deg 200deg,
+      rgba(178,76,255,0.60) 200deg 260deg,
+      rgba(110,43,255,0.65) 260deg 320deg,
+      rgba(178,76,255,0.75) 320deg 360deg
+    );
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 30px 80px rgba(0,0,0,0.55), 0 0 0 10px rgba(255,255,255,0.02);
+  position:relative;
+}
+.wheel::after{
+  content:"";
+  position:absolute;
+  inset:18px;
+  border-radius:999px;
+  background: radial-gradient(circle at 50% 45%, rgba(255,255,255,0.10), transparent 55%);
+  border:1px solid rgba(255,255,255,0.08);
+}
+
+/* News */
+.news-list{ display:flex; flex-direction:column; gap:10px; }
+.news-item{
+  padding:12px 12px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,0.08);
+  background: rgba(0,0,0,0.10);
+}
+.news-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:6px;
+}
+.news-title{ font-weight:900; }
+.news-date{ font-size:12px; color:var(--muted); font-family: var(--mono); }
+.news-text{ color:rgba(243,237,255,0.78); }
+
+/* Top */
+.top-list{ display:flex; flex-direction:column; gap:10px; }
+.top-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px 12px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,0.08);
+  background: rgba(0,0,0,0.10);
+}
+.top-left{ display:flex; align-items:center; gap:10px; min-width:0; }
+.top-face{
+  width:36px; height:36px;
+  border-radius:12px;
+  background: rgba(0,0,0,0.18);
+  border:1px solid rgba(255,255,255,0.10);
+  image-rendering: pixelated;
+}
+.top-nick{
+  font-weight:900;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.top-balance{ font-family: var(--mono); color: rgba(243,237,255,0.80); }
+
+/* Clans */
+.clan-list{ display:flex; flex-direction:column; gap:10px; }
+.clan-row{
+  padding:12px 12px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,0.08);
+  background: rgba(0,0,0,0.10);
+  display:flex; justify-content:space-between; align-items:center; gap:10px;
+}
+.clan-name{ font-weight:900; }
+.clan-tag{ font-family: var(--mono); color: var(--muted); font-size:12px; }
+
+/* Chat */
+.chat-card{ padding-bottom:12px; }
+.chat-box{
+  height:340px;
+  overflow:auto;
+  padding:10px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,0.08);
+  background: rgba(0,0,0,0.10);
+  margin-bottom:10px;
+}
+.msg{
+  margin-bottom:10px;
+  display:flex;
+  gap:8px;
+}
+.msg-meta{
+  font-size:11px;
+  color:var(--muted);
+  font-family: var(--mono);
+  min-width:86px;
+}
+.msg-body{
+  flex:1;
+  color:rgba(243,237,255,0.86);
+  word-break:break-word;
+}
+
+/* Code */
+.code{
+  font-family: var(--mono);
+  font-weight:900;
+  font-size:18px;
+  padding:10px 12px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,0.10);
+  background: rgba(0,0,0,0.16);
+  min-width:110px;
+  text-align:center;
+}
+
+/* Bottom nav (mobile) */
+.bottom-nav{
+  position:sticky;
+  bottom:0;
+  display:flex;
+  gap:10px;
+  padding:10px 12px;
+  justify-content:space-around;
+  background: rgba(10,6,20,0.72);
+  border-top:1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(12px);
+}
+.bnav{
+  cursor:pointer;
+  width:54px;
+  height:44px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,0.08);
+  background: rgba(0,0,0,0.14);
+  color:var(--text);
+  font-size:18px;
+}
+.bnav.is-active{
+  background: radial-gradient(120% 120% at 20% 10%, rgba(178,76,255,0.45), rgba(0,0,0,0.12));
+  border-color: rgba(178,76,255,0.35);
+}
+
+/* Toast */
+.toast{
+  position:fixed;
+  left:50%;
+  bottom:74px;
+  transform: translateX(-50%);
+  padding:10px 14px;
+  border-radius:18px;
+  background: rgba(0,0,0,0.55);
+  border:1px solid rgba(255,255,255,0.12);
+  box-shadow: var(--shadow);
+  color:rgba(243,237,255,0.92);
+  font-weight:800;
+  opacity:0;
+  pointer-events:none;
+  transition: opacity .18s ease, transform .18s ease;
+  z-index:5;
+}
+.toast.is-show{
+  opacity:1;
+  transform: translateX(-50%) translateY(-6px);
+}
+
+/* Desktop */
+@media (min-width: 980px){
+  .sidebar{ display:flex; }
+  .bottom-nav{ display:none; }
+  .shell{ padding:16px 18px; }
+  .home-grid{ grid-template-columns: 1fr 1fr; align-items:stretch; }
+  .head-wrap{ height:520px; }
+  #skin3d{ width:420px; height:420px; }
+  .halo{ width:360px; height:360px; }
+}
+
+/* Reduce motion */
+@media (prefers-reduced-motion: reduce){
+  #skin3d{ animation:none; }
+}
+
+
+/* ---- v0.5 demo update: 3D skin + wheel drag + withdraw ---- */
+.bottom-nav{
+  overflow-x:auto;
+  -webkit-overflow-scrolling: touch;
+  gap: 8px;
+}
+.bottom-nav::-webkit-scrollbar{ display:none; }
+.bnav{ min-width:44px; }
+
+/* 3D skin canvas */
+#skin3d{
+  touch-action: none;
+}
+
+/* Wheel upgrades */
+.wheel-wrap{
+  position:relative;
+  width:280px;
+  height:280px;
+}
+.wheel-pointer{
+  position:absolute;
+  top:-6px;
+  left:50%;
+  transform: translateX(-50%);
+  width:0;height:0;
+  border-left:14px solid transparent;
+  border-right:14px solid transparent;
+  border-bottom:22px solid rgba(255,255,255,0.92);
+  filter: drop-shadow(0 10px 20px rgba(0,0,0,0.45));
+  z-index:3;
+}
+.wheel{
+  transform: rotate(0deg);
+  transition: transform 4s cubic-bezier(.18,.9,.14,1);
+  touch-action:none;
+  user-select:none;
+}
+.wheel.is-grab{ cursor:grabbing; transition:none !important; }
+.wheel-center{
+  position:absolute;
+  inset:auto;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  width:74px;
+  height:74px;
+  border-radius:999px;
+  background: radial-gradient(circle at 35% 25%, rgba(255,255,255,0.28), rgba(0,0,0,0.35));
+  border: 1px solid rgba(255,255,255,0.16);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:900;
+  letter-spacing:0.5px;
+  box-shadow: 0 18px 50px rgba(0,0,0,0.45);
+  z-index:2;
+}
+.wheel-labels{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  z-index:1;
+}
+.wheel-label{
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform-origin: 0 0;
+  font-weight:800;
+  font-size:12px;
+  color: rgba(255,255,255,0.92);
+  text-shadow: 0 8px 18px rgba(0,0,0,0.55);
+  letter-spacing:0.2px;
+}
+.wheel-label span{
+  display:inline-block;
+  transform: translate(92px, -8px);
+}
+
+/* Withdraw list */
+.withdraw-list{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin-top:10px;
+}
+.withdraw-row{
+  padding:10px 12px;
+  border:1px solid rgba(255,255,255,0.10);
+  border-radius:14px;
+  background: rgba(0,0,0,0.18);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+.withdraw-meta{
+  color: var(--muted);
+  font-size:12px;
+  margin-top:3px;
+}
+
+.pill{
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:800;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.06);
+}
+.pill-good{ color: var(--good); }
+.pill-warn{ color: var(--warn); }
+
+</style>
 </head>
-
 <body>
+  <canvas id="bgParticles" aria-hidden="true"></canvas>
+
   <div class="app">
-    <div class="topbar">
-      <div class="logo" id="logoBtn">Ш</div>
-
-      <div class="title">
-        <span id="playerName">Игрок</span>
-        <span class="subtitle">Minecraft nickname • v0.3</span>
-      </div>
-
-      <div class="balance" title="Баланс шляпкоинов">
-        <div class="coin" id="coinIcon">🎩</div>
-        <div style="display:flex;flex-direction:column;line-height:1.05">
-          <b id="balanceValue">0</b>
-          <small>шляпкоины</small>
+    <header class="topbar">
+      <div class="brand">
+        <img class="brand-logo" src="data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22128%22%20height%3D%22128%22%20viewBox%3D%220%200%20128%20128%22%3E%0A%20%20%3Cdefs%3E%0A%20%20%20%20%3CradialGradient%20id%3D%22g%22%20cx%3D%2235%25%22%20cy%3D%2230%25%22%20r%3D%2275%25%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%23c77dff%22/%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%2255%25%22%20stop-color%3D%22%237b2cff%22/%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%232b0b55%22/%3E%0A%20%20%20%20%3C/radialGradient%3E%0A%20%20%20%20%3Cfilter%20id%3D%22glow%22%20x%3D%22-40%25%22%20y%3D%22-40%25%22%20width%3D%22180%25%22%20height%3D%22180%25%22%3E%0A%20%20%20%20%20%20%3CfeGaussianBlur%20stdDeviation%3D%225%22%20result%3D%22b%22/%3E%0A%20%20%20%20%20%20%3CfeMerge%3E%0A%20%20%20%20%20%20%20%20%3CfeMergeNode%20in%3D%22b%22/%3E%0A%20%20%20%20%20%20%20%20%3CfeMergeNode%20in%3D%22SourceGraphic%22/%3E%0A%20%20%20%20%20%20%3C/feMerge%3E%0A%20%20%20%20%3C/filter%3E%0A%20%20%3C/defs%3E%0A%20%20%3Ccircle%20cx%3D%2264%22%20cy%3D%2264%22%20r%3D%2254%22%20fill%3D%22url%28%23g%29%22%20stroke%3D%22%23e7d7ff%22%20stroke-opacity%3D%220.25%22%20stroke-width%3D%226%22/%3E%0A%20%20%3Ccircle%20cx%3D%2264%22%20cy%3D%2264%22%20r%3D%2246%22%20fill%3D%22none%22%20stroke%3D%22%23ffffff%22%20stroke-opacity%3D%220.10%22%20stroke-width%3D%222%22/%3E%0A%20%20%3Cg%20filter%3D%22url%28%23glow%29%22%3E%0A%20%20%20%20%3Ctext%20x%3D%2264%22%20y%3D%2284%22%20text-anchor%3D%22middle%22%20font-size%3D%2264%22%20font-family%3D%22Segoe%20UI%2C%20Arial%2C%20sans-serif%22%20font-weight%3D%22800%22%20fill%3D%22%23ffffff%22%3E%D0%A9%3C/text%3E%0A%20%20%3C/g%3E%0A%3C/svg%3E" alt="ЩляпКоин" />
+        <div class="brand-text">
+          <div class="brand-title" id="playerTitle">Игрок</div>
+          <div class="brand-sub" id="playerLabel">Minecraft ник</div>
         </div>
       </div>
-    </div>
 
-    <div class="pages">
-      <!-- HOME -->
-      <section class="page active" id="page-home">
-        <div class="card viewerCard">
-          <div class="row">
-            <div class="field">
-              <label>Никнейм (для теста)</label>
-              <input id="nickInput" placeholder="Например: KarasKiras" autocomplete="off" />
-            </div>
-            <button class="btn secondary" id="loadNickBtn" style="white-space:nowrap">Загрузить скин</button>
-          </div>
-
-          <div class="row">
-            <div class="pill" style="flex:0 0 auto">
-              <span>Модель</span>
-              <b id="modelText">—</b>
-            </div>
-            <div class="pill" style="flex:1">
-              <span>Источник</span>
-              <b id="skinSource">—</b>
-            </div>
-          </div>
-
-          <div class="hint" id="skinStatus">
-            Введи ник и нажми «Загрузить скин». Сначала пробуем <b>/api/profile</b> (если у тебя есть backend),
-            иначе берём официальный URL текстуры через Mojang SessionServer, с запасным планом на публичные CDN.
-          </div>
-
-          <div class="viewerWrap">
-            <canvas id="skinCanvas"></canvas>
-            <div class="tapOverlay" id="tapOverlay">
-              <div class="tapHint">Тап по персонажу: +2 🎩 (1 раз/сек)</div>
-            </div>
-          </div>
-
-          <div class="controls">
-            <button class="btn" id="uploadSkinBtn">Загрузить PNG-скин</button>
-            <button class="btn secondary" id="toggleRotateBtn">Авто-поворот: выкл</button>
-          </div>
-
-          <div class="controls">
-            <button class="btn ghost" id="refreshSkinBtn">Обновить скин</button>
-            <button class="btn secondary" id="resetBtn">Сброс</button>
-          </div>
-
-          <div class="hint">
-            Для теста всё хранится в <b>localStorage</b>. Реальный вывод/баланс делается через серверные эндпоинты:
-            <span class="mono">/api/profile</span>, <span class="mono">/api/withdraw</span> и т.п.
-          </div>
+      <div class="balance">
+        <img class="coin-ico" src="data:image/png;base64,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" alt="Щ" />
+        <div class="balance-text">
+          <div class="balance-num" id="balanceNum">0</div>
+          <div class="balance-cap">Щляпкоины</div>
         </div>
-      </section>
+      </div>
+    </header>
 
-      <!-- WHEEL -->
-      <section class="page" id="page-wheel">
-        <div class="card wheelCard">
-          <div class="needle"></div>
-          <div class="wheel" id="wheel">
-            <div class="wheelLabel" id="wheelLabel">Свайпни по колесу, чтобы крутануть</div>
+    <div class="shell">
+      <nav class="sidebar" aria-label="Навигация">
+        <button class="nav-item is-active" data-nav="home">🏠 Дом</button>
+        <button class="nav-item" data-nav="wheel">🎡 Колесо</button>
+        <button class="nav-item" data-nav="withdraw">💸 Вывод</button>
+        <div class="nav-sep"></div>
+        <button class="nav-item" data-nav="news">📰 Новости</button>
+        <button class="nav-item" data-nav="top">🏆 Топ</button>
+        <button class="nav-item" data-nav="clans">🛡️ Кланы</button>
+        <button class="nav-item" data-nav="chat">💬 Чат</button>
+      </nav>
+
+      <main class="main">
+        <!-- HOME -->
+        <section class="page is-active" data-page="home">
+          <div class="grid home-grid">
+            <div class="card">
+              <div class="card-title">Скин по нику (тест)</div>
+
+              <div class="row">
+                <div class="field grow">
+                  <label for="nickInput">Никнейм</label>
+                  <input id="nickInput" class="input" placeholder="Например: KarasKiras" autocomplete="off" />
+                </div>
+                <button class="btn" id="loadNickBtn">Загрузить</button>
+              </div>
+
+              <div class="hint" id="skinStatus">Скин берём по нику через Mojang/Microsoft API. Если не получится - можно загрузить PNG вручную.</div>
+
+              <div class="row">
+                <button class="btn btn-soft" id="toggleRotateBtn">Автоповорот: <span id="rotateState">ВКЛ</span></button>
+                <label class="btn btn-soft" for="skinFile" style="cursor:pointer; text-align:center;">
+                  Загрузить PNG
+                </label>
+                <input id="skinFile" type="file" accept="image/png" style="display:none" />
+              </div>
+
+              <div class="divider"></div>
+
+              <div class="row">
+                <button class="btn btn-soft" id="resetBtn">Сбросить тест</button>
+                <button class="btn btn-soft" id="randomNickBtn">Случайный ник</button>
+              </div>
+
+              <div class="note">
+                Сейчас баланс и таймер колеса хранятся локально (localStorage). Позже перенесём на сервер и добавим привязку через Minecraft-плагин.
+              </div>
+            </div>
+
+            <div class="card head-card">
+              <div class="card-title">Голова игрока</div>
+
+              <div class="head-wrap">
+                <div class="halo"></div>
+                <canvas id="skin3d" width="420" height="420" aria-label="3D модель скина"></canvas>
+              </div>
+
+              <div class="click-hint">Нажми на голову: <b>+1 Щляпкоин</b></div>
+              <div class="mini-hint" id="modelHint">Тип модели: —</div>
+            </div>
           </div>
+        </section>
 
-          <div class="wheelInfo">
-            <span id="cooldownText">—</span>
-            <span>Раз в 12 часов</span>
-          </div>
-
-          <div class="controls" style="width:min(360px, 92vw)">
-            <button class="btn" id="spinBtn">КРУТИТЬ</button>
-            <button class="btn secondary" id="spinInfoBtn">Шансы</button>
-          </div>
-
-          <div class="hint" id="spinHint" style="text-align:center">
-            Можно крутить кнопкой или пальцем. Приз считается по сектору под стрелкой.
-          </div>
-        </div>
-      </section>
-
-      <!-- WITHDRAW -->
-      <section class="page" id="page-withdraw">
-        <div class="card withdraw">
-          <div class="pill">
-            <span>Связь с сервером</span>
-            <b id="serverStatus">ТЕСТ / OFFLINE</b>
-          </div>
-
-          <div class="pill">
-            <span>Код привязки</span>
-            <b class="mono" id="bindCode">------</b>
-          </div>
-
-          <div class="controls">
-            <button class="btn" id="genCodeBtn">Сгенерировать код</button>
-            <button class="btn secondary" id="copyCodeBtn">Скопировать</button>
-          </div>
-
-          <div class="card" style="background:rgba(255,255,255,.05)">
-            <div style="font-weight:950;margin-bottom:8px">Вывод (прототип)</div>
+        <!-- WHEEL -->
+        <section class="page" data-page="wheel">
+          <div class="card">
+            <div class="card-title">🎡 Колесо</div>
             <div class="row">
-              <div class="field">
-                <label>Куда (ник на сервере)</label>
-                <input id="withdrawTo" placeholder="Например: KarasKiras" autocomplete="off" />
-              </div>
-              <div class="field" style="max-width: 160px">
-                <label>Сумма 🎩</label>
-                <input id="withdrawAmount" inputmode="numeric" placeholder="100" autocomplete="off" />
+              <div class="hint">Прокрутка доступна раз в <b>12 часов</b>.</div>
+              <div class="hint" id="wheelTimer">—</div>
+            </div>
+
+            <div class="wheel-area">
+              <div class="wheel-wrap" id="wheelWrap">
+                <div class="wheel-pointer" aria-hidden="true"></div>
+                <div class="wheel" id="wheel" role="img" aria-label="Колесо фортуны">
+                  <div class="wheel-center">Щ</div>
+                  <div class="wheel-labels" id="wheelLabels" aria-hidden="true"></div>
+                </div>
               </div>
             </div>
-            <div class="controls" style="margin-top:10px">
+
+            <div class="row">
+              <button class="btn" id="spinBtn">КРУТИТЬ</button>
+              <div class="hint" id="spinResult"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- WITHDRAW -->
+        <section class="page" data-page="withdraw">
+          <div class="card">
+            <div class="card-title">💸 Вывод на сервер</div>
+            <div class="hint">
+              Привязка будет через Minecraft-плагин: бот выдаёт код, а в игре ты пишешь <b>/tg link CODE</b>.
+              Сейчас это тест-страница (без реальной привязки).
+            </div>
+
+            <div class="divider"></div>
+            <div class="row">
+              <div class="field grow">
+                <label for="withdrawAmount">Сколько вывести (Щ)</label>
+                <input id="withdrawAmount" class="input" inputmode="numeric" placeholder="Например: 100" />
+              </div>
               <button class="btn" id="withdrawBtn">Вывести</button>
-              <button class="btn secondary" id="withdrawHistoryBtn">История</button>
             </div>
-            <div class="hint" style="margin-top:10px">
-              Если backend не подключён, кнопка «Вывести» создаст <b>тестовую заявку</b> (локально) и спишет баланс.
-              Когда подключишь сервер — можно сделать реальный POST на <span class="mono">/api/withdraw</span>.
+
+            <div class="hint" id="withdrawStatus">Демо-режим: создаём заявку локально (без сервера).</div>
+
+            <div class="divider"></div>
+
+            <div class="card-title" style="font-size:14px; opacity:.95">История заявок</div>
+            <div class="withdraw-list" id="withdrawList"></div>
+
+
+            <div class="row">
+              <button class="btn" id="genLinkBtn">Сгенерировать код привязки</button>
+              <div class="code" id="linkCode">—</div>
             </div>
+
+            <div class="note">
+              Дальше, когда будет плагин, вывод будет списывать Щляпкоины тут и начислять валюту на сервере.
+            </div>
+          </div>
+        </section>
+
+        <!-- NEWS -->
+        <section class="page" data-page="news">
+          <div class="card">
+            <div class="card-title">📰 Новости</div>
+            <div class="news-list" id="newsList"></div>
+          </div>
+        </section>
+
+        <!-- TOP -->
+        <section class="page" data-page="top">
+          <div class="card">
+            <div class="row space-between">
+              <div class="card-title">🏆 Топ игроков</div>
+              <button class="btn btn-soft" id="refreshTopBtn">Обновить</button>
+            </div>
+            <div class="top-list" id="topList"></div>
+            <div class="note">Сейчас топ — тестовый (локальный). Позже подключим к серверу.</div>
+          </div>
+        </section>
+
+        <!-- CLANS -->
+        <section class="page" data-page="clans">
+          <div class="card">
+            <div class="row space-between">
+              <div class="card-title">🛡️ Кланы</div>
+              <button class="btn btn-soft" id="createClanBtn">Создать</button>
+            </div>
+
+            <div class="hint" id="clanStatus">Ты не состоишь в клане.</div>
+            <div class="divider"></div>
+            <div class="clan-list" id="clanList"></div>
           </div>
 
-          <div class="card" style="background:rgba(255,255,255,.05)">
-            <div style="font-weight:950;margin-bottom:8px">Как будет в реальной версии</div>
+          <div class="card">
+            <div class="card-title">Как это будет работать</div>
             <div class="hint">
-              1) В Mini App нажимаешь «Сгенерировать код»<br/>
-              2) На сервере пишешь: <span class="mono">/tg link 123456</span><br/>
-              3) Плагин привязывает Minecraft UUID к Telegram userId<br/>
-              4) После привязки вывод становится мгновенным и безопасным
+              В будущем: клан = общий чат + рейтинг + склад/бонусы. Сейчас тест: создание/вступление хранится в localStorage.
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+
+        <!-- CHAT -->
+        <section class="page" data-page="chat">
+          <div class="card chat-card">
+            <div class="card-title">💬 Чат (тест)</div>
+            <div class="chat-box" id="chatBox"></div>
+            <div class="row">
+              <input id="chatInput" class="input grow" placeholder="Напиши сообщение..." />
+              <button class="btn" id="sendMsgBtn">Отправить</button>
+            </div>
+            <div class="note">Сейчас чат локальный (на твоём ПК). Позже сделаем серверный чат (WebSocket) и клан-чаты.</div>
+          </div>
+        </section>
+      </main>
     </div>
 
-    <nav class="nav">
-      <button class="tab" data-tab="wheel"><span class="ico">🎰</span>Колесо</button>
-      <button class="tab active" data-tab="home"><span class="ico">🏠</span>Дом</button>
-      <button class="tab" data-tab="withdraw"><span class="ico">🏦</span>Вывод</button>
+    <nav class="bottom-nav" aria-label="Нижняя навигация">
+      <button class="bnav is-active" data-nav="home" title="Дом">🏠</button>
+      <button class="bnav" data-nav="wheel" title="Колесо">🎡</button>
+      <button class="bnav" data-nav="withdraw" title="Вывод">💸</button>
+      <button class="bnav" data-nav="news" title="Новости">📰</button>
+      <button class="bnav" data-nav="top" title="Топ">🏆</button>
+      <button class="bnav" data-nav="clans" title="Кланы">🛡️</button>
+      <button class="bnav" data-nav="chat" title="Чат">💬</button>
     </nav>
   </div>
 
-  <div class="toast" id="toast">+2</div>
-  <input type="file" id="skinFile" accept="image/png" hidden />
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script>
-    // ===== Telegram WebApp hook (optional) =====
-    const tg = window.Telegram?.WebApp;
+  <script src="https://unpkg.com/skinview3d@3.0.1/bundles/skinview3d.bundle.js"></script>
+  <script type="module">
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+const LS = {
+  get(key, fallback) {
     try {
-      tg?.ready();
-      tg?.expand();
-    } catch {}
+      const v = localStorage.getItem(key);
+      return v === null ? fallback : JSON.parse(v);
+    } catch { return fallback; }
+  },
+  set(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+  }
+};
 
-    function haptic(type="impact", style="light"){
-      try{
-        if (!tg?.HapticFeedback) return;
-        if (type === "impact") tg.HapticFeedback.impactOccurred(style);
-        else if (type === "notify") tg.HapticFeedback.notificationOccurred(style); // "success" | "warning" | "error"
-      }catch{}
+const state = {
+  balance: LS.get("shlyap.balance", 0),
+  nick: LS.get("shlyap.nick", ""),
+  uuid: LS.get("shlyap.uuid", ""), // optional, for skin services
+  model: LS.get("shlyap.model", null), // "slim" | "wide" | null
+  autoRotate: LS.get("shlyap.autoRotate", true),
+  wheelNext: LS.get("shlyap.wheelNext", 0),
+  wheelRot: LS.get("shlyap.wheelRot", 0),
+  linkCode: LS.get("shlyap.linkCode", null),
+  withdrawals: LS.get("shlyap.withdrawals", []),
+  clans: LS.get("shlyap.clans", [
+    { id: "cl1", name: "Фрактал", tag: "FRAC", members: ["KarasKiras", "Nekro"] },
+    { id: "cl2", name: "Совет Магов", tag: "MAGE", members: ["KarasKiras"] },
+  ]),
+  myClanId: LS.get("shlyap.myClanId", null),
+  chat: LS.get("shlyap.chat", []),
+  news: LS.get("shlyap.news", [
+    { id: "n1", title: "Обновление", date: new Date().toISOString(), text: "карп набухался и сделал кликер в телеграмме" },
+    { id: "n2", title: "Планы", date: new Date(Date.now()-86400000).toISOString(), text: "Доделываем вкладки, 3D-скин, топ игроков, кланы и серверную привязку через плагин." },
+  ])
+};
+
+
+function saveState() {
+  LS.set("shlyap.balance", state.balance);
+  LS.set("shlyap.nick", state.nick);
+  LS.set("shlyap.uuid", state.uuid);
+  LS.set("shlyap.model", state.model);
+  LS.set("shlyap.autoRotate", state.autoRotate);
+  LS.set("shlyap.wheelNext", state.wheelNext);
+  LS.set("shlyap.wheelRot", state.wheelRot);
+  LS.set("shlyap.linkCode", state.linkCode);
+  LS.set("shlyap.withdrawals", state.withdrawals);
+  LS.set("shlyap.clans", state.clans);
+  LS.set("shlyap.myClanId", state.myClanId);
+  LS.set("shlyap.chat", state.chat);
+  LS.set("shlyap.news", state.news);
+}
+
+function toast(msg) {
+  const el = $("#toast");
+  el.textContent = msg;
+  el.classList.add("is-show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.remove("is-show"), 1600);
+}
+
+function setBalance(v) {
+  state.balance = Math.max(0, Math.floor(v));
+  $("#balanceNum").textContent = String(state.balance);
+  saveState();
+}
+
+function setPlayerTitle() {
+  $("#playerTitle").textContent = "Игрок";
+  $("#playerLabel").textContent = state.nick ? state.nick : "Minecraft ник";
+}
+
+function navTo(page) {
+  $$(".page").forEach(p => p.classList.toggle("is-active", p.dataset.page === page));
+  $$(".nav-item").forEach(b => b.classList.toggle("is-active", b.dataset.nav === page));
+  $$(".bnav").forEach(b => b.classList.toggle("is-active", b.dataset.nav === page));
+  if (page === "wheel") updateWheelTimer();
+}
+
+function pad2(n){ return String(n).padStart(2,"0"); }
+function formatTime(ms) {
+  const s = Math.max(0, Math.floor(ms/1000));
+  const h = Math.floor(s/3600);
+  const m = Math.floor((s%3600)/60);
+  const sec = s%60;
+  return `${pad2(h)}:${pad2(m)}:${pad2(sec)}`;
+
+/* ------------------------
+   3D Skin viewer (demo, no backend)
+-------------------------*/
+let skinViewer = null;
+
+function isSkinViewReady() {
+  return typeof window !== "undefined" && window.skinview3d && window.skinview3d.SkinViewer;
+}
+
+function initSkinViewer() {
+  if (!isSkinViewReady()) {
+    $("#skinStatus").textContent = "skinview3d не загрузился (проверь интернет)";
+    return;
+  }
+  const canvas = $("#skin3d");
+  // Create viewer
+  skinViewer = new window.skinview3d.SkinViewer({
+    canvas,
+    width: canvas.clientWidth || 360,
+    height: canvas.clientHeight || 360
+  });
+  skinViewer.background = null;
+  skinViewer.fov = 45;
+  skinViewer.zoom = 0.9;
+  skinViewer.autoRotate = !!state.autoRotate;
+  skinViewer.autoRotateSpeed = 0.7;
+
+  // enable controls
+  if (skinViewer.controls) {
+    skinViewer.controls.enableZoom = true;
+    skinViewer.controls.enablePan = false;
+  }
+
+  const resize = () => {
+    const r = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const w = Math.max(1, Math.floor(r.width * dpr));
+    const h = Math.max(1, Math.floor(r.height * dpr));
+    skinViewer.width = w;
+    skinViewer.height = h;
+  };
+  resize();
+  window.addEventListener("resize", resize, { passive: true });
+}
+
+function setAutoRotate(on) {
+  state.autoRotate = !!on;
+  if (skinViewer) skinViewer.autoRotate = !!on;
+  $("#rotateState").textContent = state.autoRotate ? "ВКЛ" : "ВЫКЛ";
+  saveState();
+}
+
+async function fetchJson(url, timeoutMs = 8000) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const r = await fetch(url, { signal: ctrl.signal });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return await r.json();
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+// Resolve skin using Mojang API; fallback to PlayerDB if browser blocks CORS.
+async function resolveSkin(nick) {
+  const name = String(nick || "").trim();
+  if (!name) throw new Error("Пустой ник");
+
+  // 1) Try Mojang (official)
+  try {
+    const prof = await fetchJson(`https://api.mojang.com/users/profiles/minecraft/${encodeURIComponent(name)}`);
+    const uuid = prof?.id;
+    if (!uuid) throw new Error("UUID не найден");
+    const sess = await fetchJson(`https://sessionserver.mojang.com/session/minecraft/profile/${encodeURIComponent(uuid)}`);
+    const prop = (sess?.properties || []).find(p => p?.name === "textures")?.value;
+    if (!prop) throw new Error("textures не найден");
+    const decoded = JSON.parse(atob(prop));
+    const skinUrl = decoded?.textures?.SKIN?.url;
+    const model = decoded?.textures?.SKIN?.metadata?.model === "slim" ? "slim" : "wide";
+    if (!skinUrl) throw new Error("skin url не найден");
+    return { uuid, skinUrl: skinUrl.replace(/^http:/, "https:"), model, source: "mojang" };
+  } catch (e) {
+    // 2) Fallback: PlayerDB (часто с CORS)
+    const alt = await fetchJson(`https://playerdb.co/api/player/minecraft/${encodeURIComponent(name)}`);
+    const uuid = alt?.data?.player?.id;
+    const skinUrl = alt?.data?.player?.textures?.skin?.url || alt?.data?.player?.skin_texture;
+    const model = (alt?.data?.player?.textures?.skin?.metadata?.model === "slim") ? "slim" : "wide";
+    if (!uuid || !skinUrl) throw new Error("Не удалось получить скин");
+    return { uuid, skinUrl: String(skinUrl).replace(/^http:/, "https:"), model, source: "playerdb" };
+  }
+}
+
+async function applySkinByNick(nick) {
+  $("#skinStatus").textContent = "Загружаю скин...";
+  const res = await resolveSkin(nick);
+  state.nick = String(nick).trim();
+  state.uuid = res.uuid || "";
+  state.model = res.model || null;
+  saveState();
+  setPlayerTitle();
+
+  // 3D viewer
+  if (skinViewer) {
+    await skinViewer.loadSkin(res.skinUrl);
+  }
+
+  // Hint
+  $("#skinStatus").textContent = `Скин загружен (${res.source}).`;
+  $("#modelHint").textContent = "Тип модели: " + (state.model === "slim" ? "Slim (Alex)" : "Classic (Steve)");
+  refreshTopFaces();
+}
+
+function applySkinFromFile(file) {
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  state.nick = state.nick || "PNG";
+  state.uuid = "";
+  state.model = null;
+  saveState();
+  setPlayerTitle();
+  if (skinViewer) skinViewer.loadSkin(url);
+  $("#skinStatus").textContent = "Скин загружен из файла.";
+  $("#modelHint").textContent = "Тип модели: (из файла)";
+}
+}
+
+/* ------------------------
+   Skin -> pseudo 3D head
+-------------------------*/
+
+let lastSkinImage = null;
+
+function makeCropCanvas(img, sx, sy, sw, sh) {
+  const c = document.createElement("canvas");
+  c.width = sw; c.height = sh;
+  const cx = c.getContext("2d");
+  cx.imageSmoothingEnabled = false;
+  cx.clearRect(0,0,sw,sh);
+  cx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+  return c;
+}
+
+function composeHeadTextures(img) {
+  // Base head pieces from Minecraft skin (64x64 or 64x32)
+  // Front
+  const front = makeCropCanvas(img, 8, 8, 8, 8);
+  // Right
+  const right = makeCropCanvas(img, 16, 8, 8, 8);
+  // Top
+  const top = makeCropCanvas(img, 8, 0, 8, 8);
+
+  // Overlay (hat layer) - available on 64x64, but sometimes present anyway
+  const oFront = makeCropCanvas(img, 40, 8, 8, 8);
+  const oRight = makeCropCanvas(img, 48, 8, 8, 8);
+  const oTop   = makeCropCanvas(img, 40, 0, 8, 8);
+
+  // Compose overlay onto base
+  const merge = (base, overlay) => {
+    const c = document.createElement("canvas");
+    c.width = 8; c.height = 8;
+    const ctx = c.getContext("2d");
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(base, 0, 0);
+    ctx.drawImage(overlay, 0, 0);
+    return c;
+  };
+
+  return {
+    front: merge(front, oFront),
+    right: merge(right, oRight),
+    top: merge(top, oTop),
+    // also a flat face for top list
+    face: merge(front, oFront)
+  };
+}
+
+function drawSkewed(ctx, img, x, y, w, h, skewX, skewY, shade = 0) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.transform(1, skewY, skewX, 1, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(img, 0, 0, w, h);
+  if (shade > 0) {
+    ctx.globalCompositeOperation = "source-atop";
+    ctx.fillStyle = `rgba(0,0,0,${shade})`;
+    ctx.fillRect(0, 0, w, h);
+    ctx.globalCompositeOperation = "source-over";
+  }
+  ctx.restore();
+}
+
+function renderHead3D(img) {
+  const canvas = $("#headCanvas");
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Backdrop glow
+  const cx = canvas.width/2;
+  const cy = canvas.height/2 + 20;
+  const g = ctx.createRadialGradient(cx, cy, 20, cx, cy, canvas.width*0.42);
+  g.addColorStop(0, "rgba(178,76,255,0.30)");
+  g.addColorStop(0.55, "rgba(110,43,255,0.10)");
+  g.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  const tex = composeHeadTextures(img);
+
+  const S = Math.floor(canvas.width * 0.34); // front face size
+  const fx = Math.floor(cx - S/2);
+  const fy = Math.floor(cy - S/2);
+
+  // Shadow
+  ctx.fillStyle = "rgba(0,0,0,0.35)";
+  ctx.beginPath();
+  ctx.ellipse(cx, fy + S + 40, S*0.55, S*0.22, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Right face
+  const sideW = Math.floor(S * 0.65);
+  drawSkewed(ctx, tex.right, fx + S - 2, fy + 10, sideW, S, 0.55, 0, 0.25);
+
+  // Top face
+  const topH = Math.floor(S * 0.65);
+  drawSkewed(ctx, tex.top, fx + 8, fy - topH + 6, S, topH, 0, -0.55, 0.18);
+
+  // Front face
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(tex.front, fx, fy, S, S);
+  // small front shading
+  ctx.globalCompositeOperation = "source-atop";
+  ctx.fillStyle = "rgba(0,0,0,0.10)";
+  ctx.fillRect(fx, fy + S*0.55, S, S*0.45);
+  ctx.restore();
+
+  // Outline
+  ctx.strokeStyle = "rgba(255,255,255,0.12)";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(fx, fy, S, S);
+}
+
+function renderPlaceholderHead() {
+  const canvas = $("#headCanvas");
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  const cx = canvas.width/2;
+  const cy = canvas.height/2 + 10;
+
+  // simple glowing disc
+  const g = ctx.createRadialGradient(cx, cy, 10, cx, cy, canvas.width*0.45);
+  g.addColorStop(0, "rgba(178,76,255,0.28)");
+  g.addColorStop(0.6, "rgba(110,43,255,0.10)");
+  g.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  ctx.fillStyle = "rgba(0,0,0,0.22)";
+  ctx.beginPath();
+  ctx.ellipse(cx, cy + 120, 120, 44, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  ctx.fillStyle = "rgba(178,76,255,0.35)";
+  roundRectPath(ctx, cx-95, cy-85, 190, 190, 42);
+  ctx.fill();
+
+  ctx.fillStyle = "rgba(255,255,255,0.92)";
+  ctx.font = "900 110px system-ui, -apple-system, Segoe UI, Arial";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("Щ", cx, cy+10);
+}
+
+async function loadSkinByNick(name) {
+  const nick = String(name || "").trim();
+  if (!nick) { toast("Введи ник"); return; }
+  try {
+    await applySkinByNick(nick);
+  } catch (e) {
+    $("#skinStatus").textContent = "Не удалось загрузить скин: " + (e?.message || String(e));
+    toast("Скин не загрузился");
+  }
+}
+
+
+/* ------------------------
+   Wheel
+-------------------------*/
+const WHEEL_COOLDOWN_MS = 12 * 60 * 60 * 1000;
+
+function updateWheelTimer() {
+  const now = Date.now();
+  const left = Math.max(0, (state.wheelNext || 0) - now);
+  $("#wheelTimer").textContent = left === 0 ? "Можно крутить!" : "Доступно через: " + formatTime(left);
+  $("#spinBtn").disabled = (left > 0) || wheelIsSpinning;
+}
+
+
+let wheelIsSpinning = false;
+const wheelSegments = [
+  { label: "+10", value: 10, weight: 40 },
+  { label: "+25", value: 25, weight: 30 },
+  { label: "+50", value: 50, weight: 18 },
+  { label: "+100", value: 100, weight: 8 },
+  { label: "0", value: 0, weight: 4 },
+  { label: "+75", value: 75, weight: 10 },
+  { label: "+5", value: 5, weight: 22 },
+];
+
+function weightedPickIndex() {
+  const total = wheelSegments.reduce((s,x)=>s+x.weight,0);
+  let r = Math.random()*total;
+  for (let i=0;i<wheelSegments.length;i++){
+    r -= wheelSegments[i].weight;
+    if (r<=0) return i;
+  }
+  return 0;
+}
+
+function renderWheelLabels() {
+  const cont = $("#wheelLabels");
+  if (!cont) return;
+  cont.innerHTML = "";
+  const n = wheelSegments.length;
+  const step = 360 / n;
+  for (let i=0;i<n;i++){
+    const el = document.createElement("div");
+    el.className = "wheel-label";
+    el.style.transform = `rotate(${i*step}deg)`;
+    el.innerHTML = `<span>${wheelSegments[i].label}</span>`;
+    cont.appendChild(el);
+  }
+}
+
+function getWheelRotation() {
+  return state.wheelRot || 0;
+}
+function setWheelRotation(deg) {
+  state.wheelRot = deg;
+  saveState();
+  const el = $("#wheel");
+  if (el) el.style.transform = `rotate(${deg}deg)`;
+}
+
+function normalizeDeg(d){ d%=360; if (d<0) d+=360; return d; }
+
+// Segment under pointer at top (0deg). Our labels start at 0deg on the right, so adjust by -90deg.
+function segmentIndexFromRotation(rotDeg) {
+  const n = wheelSegments.length;
+  const step = 360/n;
+  const a = normalizeDeg(-rotDeg - 90); // angle at pointer in wheel space
+  return Math.floor(a / step) % n;
+}
+
+function awardForIndex(idx) {
+  const seg = wheelSegments[idx];
+  const got = seg.value;
+  setBalance(state.balance + got);
+  $("#spinResult").textContent = got > 0 ? `Выигрыш: +${got} Щляпкоинов` : "Ничего не выпало 😭";
+  toast(got > 0 ? `+${got} Щ` : "0 Щ");
+}
+
+function spinWheel(extraTurns = 6) {
+  const now = Date.now();
+  if (wheelIsSpinning) return;
+
+  if ((state.wheelNext || 0) > now) {
+    toast("Рано! Подожди таймер");
+    updateWheelTimer();
+    return;
+  }
+
+  wheelIsSpinning = true;
+
+  const wheelEl = $("#wheel");
+  const idx = weightedPickIndex();
+  const n = wheelSegments.length;
+  const step = 360 / n;
+
+  // We want chosen segment center under pointer (top).
+  const targetCenter = idx * step + step/2;
+  // pointer at -90deg in CSS wheel, so desired wheel rotation makes that center land at -90.
+  // Solve: normalizeDeg(targetCenter + rot + 90) == 0 -> rot = -90 - targetCenter
+  const desiredRot = -90 - targetCenter;
+
+  const current = getWheelRotation();
+  // keep spinning forward (more negative degrees rotates clockwise visually depending on CSS, but ok)
+  const base = current + extraTurns*360;
+  const final = base + (desiredRot - normalizeDeg(current)); // approximate alignment
+  // Better: compute final such that modulo 360 equals desiredRot
+  const finalRot = base + (desiredRot - (current % 360));
+
+  wheelEl.style.transition = "transform 4.2s cubic-bezier(.18,.9,.14,1)";
+  wheelEl.style.transform = `rotate(${finalRot}deg)`;
+
+  const onEnd = () => {
+    wheelEl.removeEventListener("transitionend", onEnd);
+    wheelEl.style.transition = "";
+    setWheelRotation(finalRot);
+    awardForIndex(idx);
+
+    state.wheelNext = now + WHEEL_COOLDOWN_MS;
+    saveState();
+    updateWheelTimer();
+    wheelIsSpinning = false;
+  };
+  wheelEl.addEventListener("transitionend", onEnd, { once: true });
+}
+
+// Touch/drag to spin: on release, we use drag velocity to choose number of turns, but reward is still weighted.
+function bindWheelDrag() {
+  const wheelEl = $("#wheel");
+  if (!wheelEl) return;
+  let dragging = false;
+  let startRot = 0;
+  let startAng = 0;
+  let lastAng = 0;
+  let lastTs = 0;
+  let vel = 0;
+
+  const getAngle = (e) => {
+    const r = wheelEl.getBoundingClientRect();
+    const cx = r.left + r.width/2;
+    const cy = r.top + r.height/2;
+    const x = (e.clientX ?? (e.touches && e.touches[0].clientX)) - cx;
+    const y = (e.clientY ?? (e.touches && e.touches[0].clientY)) - cy;
+    return Math.atan2(y, x) * 180/Math.PI;
+  };
+
+  const onDown = (e) => {
+    if (wheelIsSpinning) return;
+    dragging = true;
+    wheelEl.classList.add("is-grab");
+    wheelEl.style.transition = "none";
+    startRot = getWheelRotation();
+    startAng = getAngle(e);
+    lastAng = startAng;
+    lastTs = performance.now();
+    vel = 0;
+    wheelEl.setPointerCapture?.(e.pointerId);
+  };
+
+  const onMove = (e) => {
+    if (!dragging) return;
+    const a = getAngle(e);
+    const delta = a - startAng;
+    const rot = startRot + delta;
+    wheelEl.style.transform = `rotate(${rot}deg)`;
+    // velocity
+    const now = performance.now();
+    const dt = Math.max(1, now - lastTs);
+    const da = a - lastAng;
+    vel = da / dt; // deg per ms
+    lastAng = a;
+    lastTs = now;
+  };
+
+  const onUp = (e) => {
+    if (!dragging) return;
+    dragging = false;
+    wheelEl.classList.remove("is-grab");
+    const currentCss = wheelEl.style.transform.match(/rotate\(([-0-9.]+)deg\)/);
+    const rot = currentCss ? parseFloat(currentCss[1]) : getWheelRotation();
+    setWheelRotation(rot);
+    wheelEl.style.transition = "";
+    // if user flicked - spin with turns derived from velocity
+    const speed = Math.min(1.5, Math.max(0, Math.abs(vel)*1200));
+    const turns = 4 + Math.floor(speed*6);
+    if (speed > 0.08) {
+      spinWheel(turns);
     }
+  };
 
-    // ===== State (prototype) =====
-    const LS_KEY = "shlyapcoin_proto_v3";
-    const state = loadState();
+  wheelEl.addEventListener("pointerdown", onDown);
+  wheelEl.addEventListener("pointermove", onMove);
+  wheelEl.addEventListener("pointerup", onUp);
+  wheelEl.addEventListener("pointercancel", onUp);
+}
 
-    const $ = (id) => document.getElementById(id);
 
-    const elBalance = $("balanceValue");
-    const elPlayer = $("playerName");
-    const elNickInput = $("nickInput");
-    const toast = $("toast");
+/* ------------------------
+   News
+-------------------------*/
+function formatDate(iso) {
+  try {
+    const d = new Date(iso);
+    return `${pad2(d.getDate())}.${pad2(d.getMonth()+1)} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  } catch { return ""; }
+}
 
-    // ===== 3D Viewer =====
-    let viewer = null;
-    let autoRotate = false;
+function renderNews() {
+  const wrap = $("#newsList");
+  wrap.innerHTML = "";
+  const items = [...state.news].sort((a,b) => (b.date||"").localeCompare(a.date||""));
+  for (const n of items) {
+    const el = document.createElement("div");
+    el.className = "news-item";
+    el.innerHTML = `
+      <div class="news-head">
+        <div class="news-title">${escapeHtml(n.title || "Новость")}</div>
+        <div class="news-date">${escapeHtml(formatDate(n.date))}</div>
+      </div>
+      <div class="news-text">${escapeHtml(n.text || "")}</div>
+    `;
+    wrap.appendChild(el);
+  }
+}
 
-    waitForSkinview3d().then(() => {
-      initViewer();
-      hydrateUI();
-    });
+/* ------------------------
+   Top
+-------------------------*/
+const TOP_DEFAULT = [
+  { nick: "KarasKiras", balance: 1200 },
+  { nick: "Nekro", balance: 980 },
+  { nick: "Dave", balance: 640 },
+  { nick: "Frey", balance: 420 },
+  { nick: "EurekaAI", balance: 300 },
+];
 
-    async function waitForSkinview3d(){
-      const start = Date.now();
-      while(!window.skinview3d){
-        if (window.__skinview3d_failed) break;
-        if (Date.now() - start > 6000) break;
-        await new Promise(r => setTimeout(r, 50));
-      }
-      if (!window.skinview3d){
-        $("skinStatus").textContent = "Не удалось загрузить 3D-библиотеку (skinview3d). Проверь интернет или попробуй позже.";
-      }
-    }
+let topData = LS.get("shlyap.top", TOP_DEFAULT);
 
-    function initViewer(){
-      if (!window.skinview3d) return;
+function saveTop() { LS.set("shlyap.top", topData); }
 
-      const canvas = $("skinCanvas");
-      viewer = new skinview3d.SkinViewer({
-        canvas,
-        width: canvas.clientWidth || 300,
-        height: canvas.clientHeight || 320,
-        skin: null,
-        model: "auto-detect"
-      });
+function renderTop() {
+  const wrap = $("#topList");
+  wrap.innerHTML = "";
+  const sorted = [...topData].sort((a,b)=> (b.balance||0)-(a.balance||0));
+  sorted.forEach((p, idx) => {
+    const row = document.createElement("div");
+    row.className = "top-row";
+    row.innerHTML = `
+      <div class="top-left">
+        <img class="top-face" data-face="${escapeAttr(p.nick)}" alt="${escapeAttr(p.nick)}" />
+        <div class="top-nick">${idx+1}. ${escapeHtml(p.nick)}</div>
+      </div>
+      <div class="top-balance">${Math.floor(p.balance||0)} Щ</div>
+    `;
+    wrap.appendChild(row);
+  });
+  refreshTopFaces();
+}
 
-      viewer.fov = 65;
-      viewer.zoom = 0.95;
-      viewer.background = null;
-      viewer.animation = new skinview3d.WalkingAnimation();
-      viewer.animation.speed = 0.6;
-
-      // Make user rotate by finger (track control)
-      viewer.controls.enableRotate = true;
-      viewer.controls.enableZoom = true;
-      viewer.controls.enablePan = false;
-
-      // Resize on window
-      const ro = new ResizeObserver(() => {
-        viewer.width = canvas.clientWidth;
-        viewer.height = canvas.clientHeight;
-      });
-      ro.observe(canvas);
-
-      // Restore skin
-      if (state.skinDataUrl){
-        viewer.loadSkin(state.skinDataUrl);
-        setSkinSource("Файл (PNG)");
-        $("skinStatus").textContent = "Скин загружен из файла (PNG).";
-      } else {
-        viewer.loadSkin(makePlaceholderSkinDataUrl());
-        if (state.nickname) setTimeout(() => loadSkinByNickname(state.nickname), 150);
-      }
-    }
-
-    function makePlaceholderSkinDataUrl(){
+async function loadFaceToImg(nick, imgEl) {
+  try {
+    const skinImg = new Image();
+    skinImg.crossOrigin = "anonymous";
+    skinImg.onload = () => {
+      // crop face (front + overlay) to small
+      const face = makeCropCanvas(skinImg, 8, 8, 8, 8);
+      const overlay = makeCropCanvas(skinImg, 40, 8, 8, 8);
       const c = document.createElement("canvas");
-      c.width = 64; c.height = 64;
-      const ctx = c.getContext("2d");
-      ctx.fillStyle = "#2a004d"; ctx.fillRect(0,0,64,64);
-      ctx.fillStyle = "#b000ff"; ctx.fillRect(8,8,16,16);
-      ctx.fillStyle = "#7a2cff"; ctx.fillRect(40,8,16,16);
-      ctx.fillStyle = "#ffffff22"; ctx.fillRect(0,32,64,32);
-      return c.toDataURL("image/png");
+      c.width=8; c.height=8;
+      const cctx = c.getContext("2d");
+      cctx.imageSmoothingEnabled=false;
+      cctx.drawImage(face,0,0);
+      cctx.drawImage(overlay,0,0);
+      imgEl.src = c.toDataURL("image/png");
+    };
+    skinImg.onerror = () => {};
+    skinImg.src = `/api/skin.png?name=${encodeURIComponent(nick)}&t=${Date.now()}`;
+  } catch {}
+}
+
+function refreshTopFaces() {
+  $$("#topList img[data-face]").forEach(img => {
+    const nick = img.getAttribute("data-face");
+    if (!nick) return;
+    if (img.dataset.loaded === "1") return;
+    img.dataset.loaded = "1";
+    loadFaceToImg(nick, img);
+  });
+}
+
+function refreshTop() {
+  // For test: random small changes
+  topData = topData.map(p => ({...p, balance: Math.max(0, (p.balance||0) + Math.floor((Math.random()-0.45)*120))}));
+  saveTop();
+  renderTop();
+  toast("Топ обновлён (тест)");
+}
+
+/* ------------------------
+   Clans (local test)
+-------------------------*/
+function findClan(id) { return state.clans.find(c => c.id === id) || null; }
+
+function renderClans() {
+  const wrap = $("#clanList");
+  wrap.innerHTML = "";
+
+  const my = state.myClanId ? findClan(state.myClanId) : null;
+  $("#clanStatus").textContent = my
+    ? `Ты в клане: ${my.name} [${my.tag}]`
+    : "Ты не состоишь в клане.";
+
+  for (const c of state.clans) {
+    const row = document.createElement("div");
+    row.className = "clan-row";
+    const membersCount = (c.members||[]).length;
+    row.innerHTML = `
+      <div>
+        <div class="clan-name">${escapeHtml(c.name)} <span class="clan-tag">[${escapeHtml(c.tag)}]</span></div>
+        <div class="hint">Участников: ${membersCount}</div>
+      </div>
+      <button class="btn btn-soft" data-join="${escapeAttr(c.id)}">${my?.id === c.id ? "Вы" : "Вступить"}</button>
+    `;
+    wrap.appendChild(row);
+  }
+
+  wrap.querySelectorAll("button[data-join]").forEach(btn => {
+    btn.addEventListener("click", () => joinClan(btn.dataset.join));
+  });
+}
+
+function joinClan(id) {
+  const clan = findClan(id);
+  if (!clan) return;
+  state.myClanId = clan.id;
+  // add nick if not present
+  const nick = state.nick || "Игрок";
+  if (!clan.members.includes(nick)) clan.members.push(nick);
+  saveState();
+  renderClans();
+  toast(`Вступил в ${clan.tag}`);
+}
+
+function createClanFlow() {
+  const name = prompt("Название клана?");
+  if (!name) return;
+  const tag = (prompt("Тег (3-5 символов)?") || "").trim().slice(0,5).toUpperCase();
+  if (!tag) return;
+  const id = "cl" + Math.random().toString(16).slice(2,8);
+  state.clans.unshift({ id, name: name.trim(), tag, members: [state.nick || "Игрок"] });
+  state.myClanId = id;
+  saveState();
+  renderClans();
+  toast("Клан создан");
+}
+
+/* ------------------------
+   Chat (local)
+-------------------------*/
+function renderChat() {
+  const box = $("#chatBox");
+  box.innerHTML = "";
+  const msgs = state.chat.slice(-200);
+  for (const m of msgs) {
+    const row = document.createElement("div");
+    row.className = "msg";
+    row.innerHTML = `
+      <div class="msg-meta">${escapeHtml(m.time || "")}</div>
+      <div class="msg-body"><b>${escapeHtml(m.nick || "Игрок")}:</b> ${escapeHtml(m.text || "")}</div>
+    `;
+    box.appendChild(row);
+  }
+  box.scrollTop = box.scrollHeight;
+}
+
+function sendChat() {
+  const input = $("#chatInput");
+  const text = (input.value || "").trim();
+  if (!text) return;
+  input.value = "";
+
+  const d = new Date();
+  const time = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  state.chat.push({ nick: state.nick || "Игрок", text, time });
+  saveState();
+  renderChat();
+}
+
+/* ------------------------
+   Link code (future MC plugin)
+-------------------------*/
+function genLinkCode() {
+  const code = String(Math.floor(100000 + Math.random()*900000));
+  state.linkCode = code;
+  saveState();
+  $("#linkCode").textContent = code;
+  toast("Код готов");
+}
+
+/* ------------------------
+   Clicker (+1) on head
+-------------------------*/
+let lastClickTs = 0;
+function onHeadClick() {
+  const t = Date.now();
+  // anti-spam: 1 click / 750ms
+  if (t - lastClickTs < 750) return;
+  lastClickTs = t;
+  setBalance(state.balance + 1);
+  toast("+1 Щ");
+}
+
+/* ------------------------
+   Background particles
+-------------------------*/
+function startParticles() {
+  const canvas = $("#bgParticles");
+  const ctx = canvas.getContext("2d");
+  let w=0,h=0;
+  const particles = [];
+
+  const resize = () => {
+    w = canvas.width = Math.floor(window.innerWidth * (window.devicePixelRatio || 1));
+    h = canvas.height = Math.floor(window.innerHeight * (window.devicePixelRatio || 1));
+  };
+  window.addEventListener("resize", resize);
+  resize();
+
+  const count = Math.min(140, Math.max(60, Math.floor((window.innerWidth*window.innerHeight)/14000)));
+  for (let i=0;i<count;i++){
+    particles.push({
+      x: Math.random()*w,
+      y: Math.random()*h,
+      r: 0.6 + Math.random()*2.2,
+      vx: (-0.35 + Math.random()*0.7),
+      vy: (-0.25 + Math.random()*0.5),
+      a: 0.08 + Math.random()*0.18,
+      hue: 260 + Math.random()*30
+    });
+  }
+
+  function frame(){
+    ctx.clearRect(0,0,w,h);
+    // subtle fog
+    ctx.fillStyle = "rgba(0,0,0,0.12)";
+    ctx.fillRect(0,0,w,h);
+
+    for (const p of particles){
+      p.x += p.vx;
+      p.y += p.vy;
+
+      if (p.x < -20) p.x = w+20;
+      if (p.x > w+20) p.x = -20;
+      if (p.y < -20) p.y = h+20;
+      if (p.y > h+20) p.y = -20;
+
+      ctx.beginPath();
+      ctx.fillStyle = `hsla(${p.hue}, 95%, 70%, ${p.a})`;
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+      ctx.fill();
     }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ------------------------
+   Utils
+-------------------------*/
+function roundRectPath(ctx, x, y, w, h, r){
+  const rr = Math.min(r, w/2, h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+rr, y);
+  ctx.arcTo(x+w, y, x+w, y+h, rr);
+  ctx.arcTo(x+w, y+h, x, y+h, rr);
+  ctx.arcTo(x, y+h, x, y, rr);
+  ctx.arcTo(x, y, x+w, y, rr);
+  ctx.closePath();
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+function escapeAttr(s){ return escapeHtml(s).replace(/`/g,""); }
+
+
+/* ------------------------
+   Withdraw (demo)
+-------------------------*/
+function renderWithdrawals() {
+  const wrap = $("#withdrawList");
+  if (!wrap) return;
+  wrap.innerHTML = "";
+  const list = Array.isArray(state.withdrawals) ? state.withdrawals : [];
+  if (list.length === 0) {
+    wrap.innerHTML = `<div class="hint">Пока заявок нет.</div>`;
+    return;
+  }
+  list.slice().reverse().forEach(w => {
+    const row = document.createElement("div");
+    row.className = "withdraw-row";
+    const when = formatDate(w.date);
+    row.innerHTML = `
+      <div>
+        <div><b>${escapeHtml(String(w.amount))} Щ</b> → сервер</div>
+        <div class="withdraw-meta">${escapeHtml(when)} • ${escapeHtml(w.status || "создано")}</div>
+      </div>
+      <div class="pill ${w.status === "выполнено" ? "pill-good" : "pill-warn"}">${escapeHtml(w.status || "создано")}</div>
+    `;
+    wrap.appendChild(row);
+  });
+}
+
+function doWithdraw() {
+  const raw = ($("#withdrawAmount")?.value || "").replace(/[^\d]/g, "");
+  const amount = Math.max(0, parseInt(raw || "0", 10));
+  if (!amount) { toast("Укажи сумму"); return; }
+  if (amount > state.balance) { toast("Недостаточно Щ"); return; }
+
+  setBalance(state.balance - amount);
+
+  state.withdrawals = Array.isArray(state.withdrawals) ? state.withdrawals : [];
+  state.withdrawals.push({
+    id: "w" + Math.random().toString(16).slice(2),
+    amount,
+    date: new Date().toISOString(),
+    status: "создано"
+  });
+  saveState();
+  $("#withdrawStatus").textContent = "Заявка создана (демо). На сервере пока ничего не происходит.";
+  renderWithdrawals();
+  toast("Заявка создана");
+}
+
+/* ------------------------
+   Bind UI
+-------------------------*/
+function bindUI() {
+  [...$$(".nav-item"), ...$$(".bnav")].forEach(btn => {
+    btn.addEventListener("click", () => navTo(btn.dataset.nav));
+  });
+
+  $("#loadNickBtn").addEventListener("click", () => loadSkinByNick($("#nickInput").value));
+
+  $("#toggleRotateBtn").addEventListener("click", () => setAutoRotate(!state.autoRotate));
+  $("#skinFile").addEventListener("change", (e) => applySkinFromFile(e.target.files && e.target.files[0]));
+  $("#nickInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") loadSkinByNick($("#nickInput").value);
+  });
+
+  $("#resetBtn").addEventListener("click", () => {
+    state.balance = 0;
+    state.wheelNext = 0;
+    state.linkCode = null;
+    state.chat = [];
+    saveState();
+    setBalance(0);
+    $("#spinResult").textContent = "";
+    $("#linkCode").textContent = "—";
+    renderChat();
+    updateWheelTimer();
+    toast("Сброшено");
+  });
+
+  $("#randomNickBtn").addEventListener("click", () => {
+    const pool = ["KarasKiras", "Dream", "Notch", "jeb_", "Technoblade", "Nekro", "Frey"];
+    $("#nickInput").value = pool[Math.floor(Math.random()*pool.length)];
+    loadSkinByNick($("#nickInput").value);
+  });
+
+  $("#spinBtn").addEventListener("click", spinWheel);
+  $("#genLinkBtn").addEventListener("click", genLinkCode);
+  $("#withdrawBtn").addEventListener("click", doWithdraw);
+  $("#refreshTopBtn").addEventListener("click", refreshTop);
+  $("#createClanBtn").addEventListener("click", createClanFlow);
+
+  $("#sendMsgBtn").addEventListener("click", sendChat);
+  $("#chatInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") sendChat();
+  });
+
+  $("#skin3d").addEventListener("click", onHeadClick);
+}
+
+function init() {
+  setBalance(state.balance);
+  setPlayerTitle();
+
+  // init input
+  $("#nickInput").value = state.nick || "";
+
+  // render initial
+  // 3D viewer will show skin (or default) 
+  renderNews();
+  renderTop();
+  renderClans();
+  renderChat();
+
+  // restore link code
+  $("#linkCode").textContent = state.linkCode ? String(state.linkCode) : "—";
+
+  // start background
+  startParticles();
+
+  // 3D skin viewer
+  initSkinViewer();
+  setAutoRotate(state.autoRotate);
+
+  // wheel UI
+  renderWheelLabels();
+  bindWheelDrag();
+
+  // withdrawals UI
+  renderWithdrawals();
+
+  // optional autoload skin
+  if (state.nick) loadSkinByNick(state.nick);
+  updateWheelTimer();
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  bindUI();
+  init();
+});
 
-    // ===== UI init =====
-    function hydrateUI(){
-      setPlayerName(state.nickname || "Игрок", /*silent*/true);
-      setBalance(state.balance || 0);
-      if (state.nickname) elNickInput.value = state.nickname;
-      $("bindCode").textContent = state.bindCode || "------";
-      $("withdrawTo").value = state.withdrawTo || (state.nickname || "");
-      setAutoRotate(!!state.autoRotate);
-
-      updateCooldownUI();
-      wireEvents();
-      updateServerStatus();
-    }
-
-    function wireEvents(){
-      // Click-to-earn
-      let lastTapMs = 0;
-      $("tapOverlay").addEventListener("click", () => {
-        const now = Date.now();
-        if (now - lastTapMs < 1000) return;
-        lastTapMs = now;
-
-        state.balance += 2;
-        saveState();
-        setBalance(state.balance);
-        showToast("+2 🎩");
-        haptic("impact","light");
-      });
-
-      // Load skin by nick
-      $("loadNickBtn").addEventListener("click", async () => {
-        const nick = (elNickInput.value || "").trim();
-        if (!nick) return showToast("Введи ник");
-        await loadSkinByNickname(nick);
-      });
-
-      // Upload skin (PNG)
-      $("uploadSkinBtn").addEventListener("click", () => $("skinFile").click());
-      $("skinFile").addEventListener("change", async (ev) => {
-        const f = ev.target.files?.[0];
-        if (!f) return;
-        if (f.type !== "image/png") return showToast("Нужен PNG");
-        const dataUrl = await fileToDataUrl(f);
-
-        state.skinDataUrl = dataUrl;
-        state.skinCache = null;
-        saveState();
-
-        if (viewer) viewer.loadSkin(dataUrl);
-        setSkinSource("Файл (PNG)");
-        $("skinStatus").textContent = "Скин загружен из файла (PNG).";
-        showToast("Ок!");
-        haptic("notify","success");
-        ev.target.value = "";
-      });
-
-      // Refresh skin
-      $("refreshSkinBtn").addEventListener("click", async () => {
-        if (state.skinDataUrl){
-          showToast("Это PNG-скин");
-          return;
-        }
-        const nick = (state.nickname || "").trim();
-        if (!nick) return showToast("Нет ника");
-        state.skinCache = null; // drop cache
-        saveState();
-        await loadSkinByNickname(nick, { force: true });
-      });
-
-      // Auto rotate
-      $("toggleRotateBtn").addEventListener("click", () => setAutoRotate(!autoRotate));
-
-      // Reset
-      $("resetBtn").addEventListener("click", () => {
-        localStorage.removeItem(LS_KEY);
-        location.reload();
-      });
-
-      // Wheel: button + drag
-      $("spinBtn").addEventListener("click", () => spinWheelRandom());
-      $("spinInfoBtn").addEventListener("click", () => showSpinChances());
-      setupWheelDrag();
-
-      // Withdraw bind code
-      $("genCodeBtn").addEventListener("click", () => {
-        const code = String(Math.floor(100000 + Math.random()*900000));
-        state.bindCode = code;
-        saveState();
-        $("bindCode").textContent = code;
-        showToast("Код готов");
-        haptic("impact","medium");
-      });
-
-      $("copyCodeBtn").addEventListener("click", async () => {
-        const code = state.bindCode || "------";
-        try{
-          await navigator.clipboard.writeText(code);
-          showToast("Скопировано");
-          haptic("notify","success");
-        }catch{
-          showToast("Не смог скопировать");
-          haptic("notify","warning");
-        }
-      });
-
-      // Withdraw
-      $("withdrawBtn").addEventListener("click", async () => {
-        const to = ($("withdrawTo").value || "").trim();
-        const amount = parseInt(($("withdrawAmount").value || "").trim(), 10);
-
-        if (!to) return showToast("Куда выводить?");
-        if (!Number.isFinite(amount) || amount <= 0) return showToast("Сумма?");
-        if (amount > state.balance) return showToast("Не хватает 🎩");
-
-        state.withdrawTo = to;
-        saveState();
-
-        // Try backend first
-        const ok = await tryServerWithdraw({ to, amount });
-        if (ok) return;
-
-        // Local prototype
-        state.balance -= amount;
-        state.withdrawals.unshift({
-          id: cryptoRandomId(),
-          to,
-          amount,
-          ts: Date.now(),
-          status: "pending"
-        });
-        saveState();
-        setBalance(state.balance);
-
-        showToast("Заявка создана");
-        haptic("notify","success");
-      });
-
-      $("withdrawHistoryBtn").addEventListener("click", () => {
-        showWithdrawHistory();
-      });
-
-      // Navigation
-      const tabs = Array.from(document.querySelectorAll(".tab"));
-      tabs.forEach(btn => btn.addEventListener("click", () => {
-        const target = btn.dataset.tab;
-        setTab(target);
-      }));
-    }
-
-    // ===== Skin loading (Mojang / backend / fallback) =====
-    async function loadSkinByNickname(nick, opts = {}){
-      setPlayerName(nick);
-
-      const status = $("skinStatus");
-      status.textContent = "Загружаю скин…";
-      $("modelText").textContent = "…";
-      setSkinSource("…");
-
-      // If user previously uploaded a PNG, switch back to nickname mode
-      state.skinDataUrl = "";
-      saveState();
-
-      // 0) cache (10 minutes) to avoid rate limits
-      const cacheKey = nick.toLowerCase();
-      const cached = state.skinCache?.[cacheKey];
-      const cacheOk = cached && !opts.force && (Date.now() - cached.ts < 10 * 60 * 1000);
-      if (cacheOk){
-        applyResolvedSkin(cached.resolved, { cached: true });
-        return;
-      }
-
-      // 1) Local backend (same-origin)
-      try{
-        const apiUrl = `/api/profile?name=${encodeURIComponent(nick)}`;
-        const r = await fetchWithTimeout(apiUrl, 2200);
-        if (!r.ok) throw new Error("backend not ok");
-        const j = await r.json();
-        if (!j.ok) throw new Error(j.error || "Ошибка");
-
-        const resolved = {
-          name: j.name || nick,
-          model: j.model || "auto",
-          skinUrl: j.skinProxyUrl || j.skinUrl || null,
-          source: "/api/profile"
-        };
-
-        if (!resolved.skinUrl) throw new Error("no skin url");
-        applyResolvedSkin(resolved);
-
-        rememberCache(cacheKey, resolved);
-        return;
-      }catch(e){
-        console.warn("backend /api/profile unavailable", e);
-      }
-
-      // 2) Mojang official (uuid + sessionserver textures)
-      try{
-        const resolved = await resolveSkinViaMojang(nick);
-        applyResolvedSkin(resolved);
-        rememberCache(cacheKey, resolved);
-        return;
-      }catch(e){
-        console.warn("Mojang resolve failed", e);
-      }
-
-      // 3) Fallback CDN (username-based)
-      try{
-        const url = `https://minotar.net/skin/${encodeURIComponent(nick)}.png?v=${Date.now()}`;
-        const resolved = { name: nick, model: "auto", skinUrl: url, source: "Minotar (fallback)" };
-        applyResolvedSkin(resolved);
-        rememberCache(cacheKey, resolved);
-        return;
-      }catch(e){
-        console.warn("Minotar failed", e);
-      }
-
-      status.textContent = "Не смог загрузить скин. Попробуй другой ник или загрузи PNG.";
-      $("modelText").textContent = "—";
-      setSkinSource("—");
-      showToast("Не вышло 😅");
-      haptic("notify","error");
-    }
-
-    async function resolveSkinViaMojang(name){
-      // 1) username -> uuid
-      const profile = await fetchJsonWithTimeout(`https://api.mojang.com/users/profiles/minecraft/${encodeURIComponent(name)}`, 3500);
-      if (!profile?.id) throw new Error("no uuid");
-      const uuid = profile.id; // no dashes
-
-      // 2) uuid -> textures (signed base64)
-      try{
-        const sess = await fetchJsonWithTimeout(`https://sessionserver.mojang.com/session/minecraft/profile/${uuid}?unsigned=false`, 3500);
-        const prop = (sess?.properties || []).find(p => p?.name === "textures");
-        if (!prop?.value) throw new Error("no textures");
-        const decoded = JSON.parse(atob(prop.value));
-
-        const skin = decoded?.textures?.SKIN;
-        const skinUrlRaw = skin?.url;
-        if (!skinUrlRaw) throw new Error("no skin url");
-        // The SessionServer sometimes returns http URLs; force https for the browser.
-        const skinUrl = String(skinUrlRaw).replace(/^http:/, "https:");
-
-        const model = skin?.metadata?.model === "slim" ? "slim" : "default";
-        return {
-          name: profile.name || name,
-          model,
-          skinUrl,
-          source: "Mojang SessionServer"
-        };
-      }catch(e){
-        // Fallback: Crafatar serves skins by UUID with CORS enabled (good for WebGL textures)
-        return {
-          name: profile.name || name,
-          model: "auto",
-          skinUrl: `https://crafatar.com/skins/${uuid}?v=${Date.now()}`,
-          source: "Crafatar (fallback)"
-        };
-      }
-    }
-
-    function applyResolvedSkin(resolved, meta = {}){
-      if (viewer) viewer.loadSkin(resolved.skinUrl + (resolved.skinUrl.includes("?") ? "&" : "?") + "v=" + Date.now());
-
-      $("modelText").textContent = resolved.model === "slim" ? "Slim (Alex)" :
-                                 (resolved.model === "default" ? "Wide (Steve)" : "Auto");
-      setSkinSource(resolved.source || "—");
-
-      $("skinStatus").textContent =
-        (meta.cached ? "✅ (кэш) " : "✅ ") +
-        `Скин: ${resolved.name} • источник: ${resolved.source}.`;
-
-      showToast("Скин загружен");
-      haptic("notify","success");
-    }
-
-    function rememberCache(key, resolved){
-      state.skinCache = state.skinCache || {};
-      state.skinCache[key] = { ts: Date.now(), resolved };
-      saveState();
-    }
-
-    function setSkinSource(text){
-      $("skinSource").textContent = text;
-    }
-
-    function setAutoRotate(on){
-      autoRotate = !!on;
-      state.autoRotate = autoRotate;
-      saveState();
-      if (viewer) viewer.autoRotate = autoRotate;
-      $("toggleRotateBtn").textContent = "Авто-поворот: " + (autoRotate ? "вкл" : "выкл");
-    }
-
-    function fetchWithTimeout(url, ms){
-      const controller = new AbortController();
-      const t = setTimeout(() => controller.abort(), ms);
-      return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(t));
-    }
-
-    async function fetchJsonWithTimeout(url, ms){
-      const r = await fetchWithTimeout(url, ms);
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      return await r.json();
-    }
-
-    function fileToDataUrl(file){
-      return new Promise((resolve, reject) => {
-        const r = new FileReader();
-        r.onload = () => resolve(r.result);
-        r.onerror = reject;
-        r.readAsDataURL(file);
-      });
-    }
-
-    // ===== Wheel (drag + cooldown + deterministic sectors) =====
-    const SPIN_CD_MS = 12 * 60 * 60 * 1000;
-    const wheelEl = $("wheel");
-    const wheelLabel = $("wheelLabel");
-
-    // 8 sectors (each 45deg). Feel free to change.
-    const SECTORS = [
-      { prize: 10,  label: "+10"  },
-      { prize: 25,  label: "+25"  },
-      { prize: 50,  label: "+50"  },
-      { prize: 0,   label: "0"    },
-      { prize: 10,  label: "+10"  },
-      { prize: 25,  label: "+25"  },
-      { prize: 100, label: "+100" },
-      { prize: 50,  label: "+50"  }
-    ];
-    const SEG = 360 / SECTORS.length;
-
-    let spinning = false;
-    let wheelRot = Number(state.wheelRot || 0); // degrees
-    setWheelRotation(wheelRot);
-
-    function canSpinNow(){
-      const now = Date.now();
-      return (state.lastSpinMs + SPIN_CD_MS) - now <= 0;
-    }
-
-    function showSpinChances(){
-      // This wheel is sector-based; "chances" are uniform per sector (8 sectors).
-      const parts = SECTORS.map((s, i) => `${i+1}) ${s.label} 🎩`).join("\\n");
-      alert("Сектора колеса (равновероятно):\\n\\n" + parts + "\\n\\nКрути пальцем или кнопкой.");
-    }
-
-    function spinWheelRandom(){
-      if (spinning) return;
-      if (!canSpinNow()) return showToast("Ещё рано 😄");
-
-      // random extra spins + random landing
-      const extra = 360 * (6 + Math.random()*3) + Math.random()*360;
-      spinTo(wheelRot + extra);
-    }
-
-    function setupWheelDrag(){
-      let down = false;
-      let lastA = 0;
-      let lastT = 0;
-      let vel = 0;
-
-      function angleFromEvent(ev){
-        const rect = wheelEl.getBoundingClientRect();
-        const cx = rect.left + rect.width/2;
-        const cy = rect.top + rect.height/2;
-        const x = (ev.clientX - cx);
-        const y = (ev.clientY - cy);
-        // atan2 gives angle from x-axis; we want 0 at top
-        const a = Math.atan2(y, x) * 180 / Math.PI; // -180..180, 0 at right
-        return a + 90; // 0 at top
-      }
-
-      wheelEl.addEventListener("pointerdown", (ev) => {
-        if (spinning) return;
-        if (!canSpinNow()) { showToast("КД 😄"); return; }
-        down = true;
-        wheelEl.setPointerCapture(ev.pointerId);
-        lastA = angleFromEvent(ev);
-        lastT = performance.now();
-        vel = 0;
-        wheelLabel.textContent = "Крути… отпусти чтобы запустить";
-      });
-
-      wheelEl.addEventListener("pointermove", (ev) => {
-        if (!down || spinning) return;
-        const a = angleFromEvent(ev);
-        const now = performance.now();
-        let da = a - lastA;
-        // normalize jump across 180 -> -180
-        if (da > 180) da -= 360;
-        if (da < -180) da += 360;
-
-        wheelRot += da;
-        setWheelRotation(wheelRot);
-
-        const dt = Math.max(16, now - lastT);
-        vel = (da / dt) * 16; // deg per ~frame
-        lastA = a;
-        lastT = now;
-      });
-
-      function end(){
-        if (!down || spinning) return;
-        down = false;
-
-        // convert velocity to spin power
-        const power = Math.max(0.8, Math.min(4.2, Math.abs(vel)));
-        const extra = 360 * (3 + power*2) + Math.random()*120;
-
-        // direction depends on last velocity sign; if tiny, random
-        const dir = (vel === 0) ? (Math.random() > 0.5 ? 1 : -1) : Math.sign(vel);
-        wheelLabel.textContent = "Вращаем…";
-        spinTo(wheelRot + extra * dir);
-      }
-
-      wheelEl.addEventListener("pointerup", end);
-      wheelEl.addEventListener("pointercancel", end);
-      wheelEl.addEventListener("pointerleave", () => { /* ignore */ });
-    }
-
-    function setWheelRotation(deg){
-      wheelRot = deg;
-      wheelEl.style.transition = "transform 0s";
-      wheelEl.style.transform = `rotate(${wheelRot}deg)`;
-      state.wheelRot = wheelRot;
-      saveState();
-    }
-
-    function spinTo(targetDeg){
-      spinning = true;
-      wheelEl.style.transition = "transform 2.2s cubic-bezier(.10,.78,.16,1)";
-      wheelEl.style.transform = `rotate(${targetDeg}deg)`;
-
-      // lock in final rotation
-      const start = wheelRot;
-      wheelRot = targetDeg;
-
-      setTimeout(() => {
-        spinning = false;
-        state.lastSpinMs = Date.now();
-
-        const prize = prizeFromRotation(wheelRot);
-        state.balance += prize;
-        saveState();
-
-        setBalance(state.balance);
-        updateCooldownUI();
-
-        wheelLabel.textContent = prize === 0 ? "0 😭" : `+${prize} 🎩`;
-        showToast(prize === 0 ? "0 😭" : `+${prize} 🎩`);
-        haptic("impact","heavy");
-
-        // settle without transition
-        setTimeout(() => setWheelRotation(wheelRot), 80);
-      }, 2250);
-    }
-
-    function prizeFromRotation(rotDeg){
-      // needle at top. wheel rotation clockwise positive.
-      // We need the sector under needle:
-      const a = ((rotDeg % 360) + 360) % 360; // 0..359
-      const underNeedle = (360 - a) % 360; // invert
-      const idx = Math.floor(underNeedle / SEG) % SECTORS.length;
-      return SECTORS[idx].prize;
-    }
-
-    function updateCooldownUI(){
-      const now = Date.now();
-      const left = (state.lastSpinMs + SPIN_CD_MS) - now;
-      const el = $("cooldownText");
-      if (left <= 0){
-        el.textContent = "Можно крутить!";
-        $("spinBtn").disabled = false;
-        wheelLabel.textContent = "Свайпни по колесу, чтобы крутануть";
-        return;
-      }
-      const hh = Math.floor(left / 3600000);
-      const mm = Math.floor((left % 3600000) / 60000);
-      const ss = Math.floor((left % 60000) / 1000);
-      el.textContent = `Осталось: ${String(hh).padStart(2,"0")}:${String(mm).padStart(2,"0")}:${String(ss).padStart(2,"0")}`;
-      $("spinBtn").disabled = true;
-      setTimeout(updateCooldownUI, 1000);
-    }
-
-    // ===== Withdraw: backend-first, local fallback =====
-    async function updateServerStatus(){
-      // quick ping (optional)
-      try{
-        const r = await fetchWithTimeout("/api/ping", 900);
-        if (r.ok){
-          $("serverStatus").textContent = "ONLINE";
-          return;
-        }
-      }catch{}
-      $("serverStatus").textContent = "ТЕСТ / OFFLINE";
-    }
-
-    async function tryServerWithdraw(payload){
-      // Optional backend: implement POST /api/withdraw -> { ok:true, balance?:number } (or { ok:false, error:"..." })
-      try{
-        const controller = new AbortController();
-        const t = setTimeout(() => controller.abort(), 3000);
-
-        const r = await fetch("/api/withdraw", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-          signal: controller.signal
-        }).finally(() => clearTimeout(t));
-
-        // If there is no backend (GitHub Pages), it will usually be 404.
-        if (r.status === 404 || r.status === 405) return false;
-
-        let j = null;
-        try { j = await r.json(); } catch { j = null; }
-
-        if (!r.ok){
-          showToast((j && j.error) ? j.error : ("Ошибка вывода (" + r.status + ")"));
-          haptic("notify", "error");
-          return true; // request handled by server response; do not fall back locally
-        }
-
-        if (j && j.ok === false){
-          showToast(j.error || "Ошибка вывода");
-          haptic("notify", "error");
-          return true;
-        }
-
-        // Success
-        if (j && Number.isFinite(j.balance)){
-          state.balance = Number(j.balance);
-          saveState();
-          setBalance(state.balance);
-        }
-
-        state.withdrawals.unshift({
-          id: cryptoRandomId(),
-          to: payload.to,
-          amount: payload.amount,
-          ts: Date.now(),
-          status: "done"
-        });
-        saveState();
-
-        showToast("Выведено ✅");
-        haptic("notify", "success");
-        return true;
-      }catch(e){
-        return false; // network/offline -> allow local fallback
-      }
-    }
-
-    function showWithdrawHistory(){
-      const list = state.withdrawals || [];
-      if (!list.length){
-        alert("История пустая.");
-        return;
-      }
-      const lines = list.slice(0, 10).map(w => {
-        const d = new Date(w.ts);
-        const t = d.toLocaleString();
-        const st = w.status === "done" ? "✅" : (w.status === "failed" ? "❌" : "⏳");
-        return `${st} ${w.amount} 🎩 -> ${w.to} (${t})`;
-      });
-      alert("Последние заявки:\\n\\n" + lines.join("\\n"));
-    }
-
-    // ===== Navigation =====
-    const tabs = Array.from(document.querySelectorAll(".tab"));
-    function setTab(name){
-      tabs.forEach(b => b.classList.toggle("active", b.dataset.tab === name));
-      document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
-      const el = $("page-" + name);
-      if (el) el.classList.add("active");
-      if (name === "wheel") updateCooldownUI();
-    }
-
-    // ===== Helpers =====
-    function setBalance(v){ elBalance.textContent = String(v); }
-
-    function setPlayerName(nick, silent=false){
-      elPlayer.textContent = nick;
-      if (!silent){
-        state.nickname = nick;
-        saveState();
-      } else {
-        state.nickname = nick;
-        saveState();
-      }
-    }
-
-    function showToast(text){
-      toast.textContent = text;
-      toast.classList.add("show");
-      setTimeout(() => toast.classList.remove("show"), 950);
-    }
-
-    function cryptoRandomId(){
-      try{
-        const a = new Uint8Array(8);
-        crypto.getRandomValues(a);
-        return Array.from(a).map(x => x.toString(16).padStart(2,"0")).join("");
-      }catch{
-        return String(Math.random()).slice(2);
-      }
-    }
-
-    function loadState(){
-      try{
-        const raw = localStorage.getItem(LS_KEY);
-        if (!raw) return freshState();
-        const s = JSON.parse(raw);
-        return {
-          balance: Number(s.balance || 0),
-          nickname: String(s.nickname || ""),
-          skinDataUrl: String(s.skinDataUrl || ""),
-          lastSpinMs: Number(s.lastSpinMs || 0),
-          bindCode: String(s.bindCode || ""),
-          withdrawTo: String(s.withdrawTo || ""),
-          withdrawals: Array.isArray(s.withdrawals) ? s.withdrawals : [],
-          wheelRot: Number(s.wheelRot || 0),
-          skinCache: s.skinCache || null,
-          autoRotate: !!s.autoRotate
-        };
-      }catch{
-        return freshState();
-      }
-    }
-
-    function freshState(){
-      return {
-        balance: 0,
-        nickname: "",
-        skinDataUrl: "",
-        lastSpinMs: 0,
-        bindCode: "",
-        withdrawTo: "",
-        withdrawals: [],
-        wheelRot: 0,
-        skinCache: null,
-        autoRotate: false
-      };
-    }
-
-    function saveState(){
-      localStorage.setItem(LS_KEY, JSON.stringify(state));
-    }
   </script>
 </body>
 </html>
