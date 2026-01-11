@@ -3,17 +3,38 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>ШляпКоин • Mini App (single-file mobile preview)</title>
+  <title>ШляпКоин • Mini App (v0.3)</title>
 
-  <!-- 3D skin viewer (CDN). Работает и в Telegram, и в обычном браузере. -->
-  <script src="https://unpkg.com/skinview3d@2.1.0/bundles/skinview3d.bundle.js"></script>
+  <!-- Skin viewer loader with CDN fallback -->
+  <script>
+    (function(){
+      const urls = [
+        "https://cdn.jsdelivr.net/npm/skinview3d@3.4.1/bundles/skinview3d.bundle.js",
+        "https://unpkg.com/skinview3d@3.4.1/bundles/skinview3d.bundle.js"
+      ];
+      let i = 0;
+      function loadNext(){
+        if(i >= urls.length){
+          console.error("skinview3d failed to load from CDNs");
+          window.__skinview3d_failed = true;
+          return;
+        }
+        const s = document.createElement("script");
+        s.src = urls[i++];
+        s.async = true;
+        s.onload = () => { window.__skinview3d_loaded = true; };
+        s.onerror = loadNext;
+        document.head.appendChild(s);
+      }
+      loadNext();
+    })();
+  </script>
 
   <style>
     :root{
       --bg0:#0b0014;
       --bg1:#130027;
       --card:#17002e;
-      --card2:#1f003b;
       --stroke: rgba(255,255,255,.12);
       --text:#f3e8ff;
       --muted: rgba(243,232,255,.72);
@@ -144,7 +165,7 @@
     /* Home layout */
     .viewerCard{
       flex:1;
-      min-height: 360px;
+      min-height: 380px;
       display:flex;
       flex-direction:column;
       gap:10px;
@@ -153,7 +174,7 @@
     .viewerWrap{
       position:relative;
       flex:1;
-      min-height: 280px;
+      min-height: 260px;
       border-radius: calc(var(--radius) - 6px);
       background:
         radial-gradient(700px 500px at 50% 30%, rgba(176,0,255,.22), transparent 60%),
@@ -167,9 +188,9 @@
       width:100%;
       height:100%;
       display:block;
+      touch-action: none; /* allow pan/rotate inside viewer */
     }
 
-    /* Click overlay */
     .tapOverlay{
       position:absolute;
       inset:0;
@@ -180,7 +201,6 @@
       padding-bottom: 10px;
       user-select:none;
     }
-
     .tapHint{
       background: rgba(0,0,0,.35);
       border: 1px solid rgba(255,255,255,.14);
@@ -212,7 +232,17 @@
       border: 1px solid rgba(255,255,255,.12);
       box-shadow: 0 12px 28px rgba(0,0,0,.25);
     }
+    .btn.ghost{
+      background: transparent;
+      border: 1px solid rgba(255,255,255,.14);
+      box-shadow: none;
+    }
     .btn:active{transform: translateY(1px);}
+    .btn[disabled]{
+      opacity:.65;
+      cursor:not-allowed;
+      transform:none;
+    }
 
     .row{
       display:flex;
@@ -233,7 +263,7 @@
       color:var(--muted);
       font-weight:750;
     }
-    .field input{
+    .field input, .field select{
       width:100%;
       background: rgba(0,0,0,.28);
       border: 1px solid rgba(255,255,255,.12);
@@ -243,13 +273,32 @@
       outline:none;
       font-weight:750;
     }
+    .field select{appearance:none;}
+
+    .pill{
+      padding: 10px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.12);
+      color: var(--muted);
+      font-weight:800;
+      font-size:12px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+    }
+    .pill b{color:var(--text)}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
+
+    .hint{
+      font-size:12px;
+      color: var(--muted);
+      font-weight:700;
+      line-height:1.35;
+    }
 
     /* Wheel */
-    .wheelWrap{
-      display:flex;
-      flex-direction:column;
-      gap:12px;
-    }
     .wheelCard{
       display:flex;
       flex-direction:column;
@@ -275,6 +324,7 @@
       box-shadow: 0 30px 80px rgba(0,0,0,.45);
       position:relative;
       overflow:hidden;
+      touch-action: none; /* we handle drag */
     }
     .wheel::after{
       content:"";
@@ -284,11 +334,24 @@
       background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.20), rgba(0,0,0,.15));
       border: 1px solid rgba(255,255,255,.14);
     }
+    .wheelLabel{
+      position:absolute;
+      inset: 0;
+      display:grid;
+      place-items:center;
+      text-align:center;
+      padding: 18%;
+      color: rgba(243,232,255,.85);
+      font-weight: 950;
+      letter-spacing:.2px;
+      text-shadow: 0 10px 25px rgba(0,0,0,.55);
+      pointer-events:none;
+    }
     .needle{
       width:0;height:0;
       border-left: 14px solid transparent;
       border-right: 14px solid transparent;
-      border-bottom: 22px solid rgba(255,255,255,.9);
+      border-bottom: 22px solid rgba(255,255,255,.92);
       filter: drop-shadow(0 10px 12px rgba(0,0,0,.45));
       margin-top:-6px;
     }
@@ -307,21 +370,38 @@
       flex-direction:column;
       gap:12px;
     }
-    .pill{
-      padding: 10px 12px;
-      border-radius: 999px;
-      background: rgba(255,255,255,.06);
-      border: 1px solid rgba(255,255,255,.12);
-      color: var(--muted);
-      font-weight:800;
-      font-size:12px;
+    .list{
       display:flex;
-      justify-content:space-between;
-      align-items:center;
+      flex-direction:column;
       gap:10px;
     }
-    .pill b{color:var(--text)}
-    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
+    .item{
+      padding: 12px;
+      border-radius: 16px;
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.10);
+    }
+    .itemTop{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:center;
+      margin-bottom:6px;
+      font-weight:900;
+    }
+    .tag{
+      font-size:12px;
+      font-weight:950;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.25);
+      color: rgba(243,232,255,.85);
+      white-space:nowrap;
+    }
+    .tag.good{border-color: rgba(54,255,138,.35); background: rgba(54,255,138,.10); color: rgba(54,255,138,.95);}
+    .tag.warn{border-color: rgba(255,211,106,.35); background: rgba(255,211,106,.10); color: rgba(255,211,106,.95);}
+    .tag.bad{border-color: rgba(255,77,109,.35); background: rgba(255,77,109,.10); color: rgba(255,77,109,.95);}
 
     /* Bottom nav */
     .nav{
@@ -356,10 +436,13 @@
     }
     .ico{
       width:18px;height:18px;
-      display:inline-block;
-      border-radius: 6px;
-      background: rgba(255,255,255,.12);
+      display:inline-grid;
+      place-items:center;
+      border-radius: 7px;
+      background: rgba(255,255,255,.10);
       border: 1px solid rgba(255,255,255,.14);
+      font-size:12px;
+      line-height:1;
     }
     .toast{
       position:fixed;
@@ -381,12 +464,6 @@
       opacity:1;
       transform: translateX(-50%) translateY(-4px);
     }
-    .hint{
-      font-size:12px;
-      color: var(--muted);
-      font-weight:700;
-      line-height:1.35;
-    }
 
     /* Desktop support */
     @media (min-width: 900px){
@@ -394,7 +471,7 @@
       .app{max-width: 980px; margin: 0 auto;}
       .pages{padding: 12px 18px 18px;}
       .page{inset: 0 18px 18px 18px;}
-      .viewerCard{min-height: 560px;}
+      .viewerCard{min-height: 580px;}
       .viewerWrap{min-height: 420px;}
       .wheel{width: min(380px, 55vw);}
     }
@@ -408,7 +485,7 @@
 
       <div class="title">
         <span id="playerName">Игрок</span>
-        <span class="subtitle">Minecraft nickname</span>
+        <span class="subtitle">Minecraft nickname • v0.3</span>
       </div>
 
       <div class="balance" title="Баланс шляпкоинов">
@@ -429,34 +506,45 @@
               <label>Никнейм (для теста)</label>
               <input id="nickInput" placeholder="Например: KarasKiras" autocomplete="off" />
             </div>
-            <button class="btn secondary" id="loadNickBtn" style="white-space:nowrap">Загрузить</button>
+            <button class="btn secondary" id="loadNickBtn" style="white-space:nowrap">Загрузить скин</button>
           </div>
 
           <div class="row">
             <div class="pill" style="flex:0 0 auto">
-              <span>Тип рук</span>
+              <span>Модель</span>
               <b id="modelText">—</b>
             </div>
-            <div class="hint" id="skinStatus" style="flex:1">
-              Скин берём по нику: если доступен серверный /api/profile — используем его, иначе пробуем публичный CDN. Без привязки.
+            <div class="pill" style="flex:1">
+              <span>Источник</span>
+              <b id="skinSource">—</b>
             </div>
+          </div>
+
+          <div class="hint" id="skinStatus">
+            Введи ник и нажми «Загрузить скин». Сначала пробуем <b>/api/profile</b> (если у тебя есть backend),
+            иначе берём официальный URL текстуры через Mojang SessionServer, с запасным планом на публичные CDN.
           </div>
 
           <div class="viewerWrap">
             <canvas id="skinCanvas"></canvas>
             <div class="tapOverlay" id="tapOverlay">
-              <div class="tapHint">Нажми на персонажа: +2 шляпкоина</div>
+              <div class="tapHint">Тап по персонажу: +2 🎩 (1 раз/сек)</div>
             </div>
           </div>
 
           <div class="controls">
-            <button class="btn" id="uploadSkinBtn">Загрузить скин (PNG)</button>
-            <button class="btn secondary" id="resetBtn">Сбросить тест</button>
+            <button class="btn" id="uploadSkinBtn">Загрузить PNG-скин</button>
+            <button class="btn secondary" id="toggleRotateBtn">Авто-поворот: выкл</button>
+          </div>
+
+          <div class="controls">
+            <button class="btn ghost" id="refreshSkinBtn">Обновить скин</button>
+            <button class="btn secondary" id="resetBtn">Сброс</button>
           </div>
 
           <div class="hint">
-            Сейчас: баланс и таймер колеса хранятся в <b>localStorage</b>.
-            Позже: перенесём это на сервер и привяжем к Telegram userId (и к Minecraft-серверу для вывода).
+            Для теста всё хранится в <b>localStorage</b>. Реальный вывод/баланс делается через серверные эндпоинты:
+            <span class="mono">/api/profile</span>, <span class="mono">/api/withdraw</span> и т.п.
           </div>
         </div>
       </section>
@@ -465,16 +553,22 @@
       <section class="page" id="page-wheel">
         <div class="card wheelCard">
           <div class="needle"></div>
-          <div class="wheel" id="wheel"></div>
+          <div class="wheel" id="wheel">
+            <div class="wheelLabel" id="wheelLabel">Свайпни по колесу, чтобы крутануть</div>
+          </div>
 
           <div class="wheelInfo">
-            <span id="cooldownText">Готово!</span>
+            <span id="cooldownText">—</span>
             <span>Раз в 12 часов</span>
           </div>
 
-          <button class="btn" id="spinBtn" style="width:min(320px,86vw)">КРУТИТЬ</button>
-          <div class="hint" style="text-align:center">
-            Награда выдаётся сразу. В реальной версии можно сделать красивую анимацию и таблицу шансов.
+          <div class="controls" style="width:min(360px, 92vw)">
+            <button class="btn" id="spinBtn">КРУТИТЬ</button>
+            <button class="btn secondary" id="spinInfoBtn">Шансы</button>
+          </div>
+
+          <div class="hint" id="spinHint" style="text-align:center">
+            Можно крутить кнопкой или пальцем. Приз считается по сектору под стрелкой.
           </div>
         </div>
       </section>
@@ -483,8 +577,8 @@
       <section class="page" id="page-withdraw">
         <div class="card withdraw">
           <div class="pill">
-            <span>Статус связи с сервером</span>
-            <b>ТЕСТ / НЕ ПОДКЛЮЧЕНО</b>
+            <span>Связь с сервером</span>
+            <b id="serverStatus">ТЕСТ / OFFLINE</b>
           </div>
 
           <div class="pill">
@@ -497,13 +591,35 @@
             <button class="btn secondary" id="copyCodeBtn">Скопировать</button>
           </div>
 
-          <div class="card" style="margin-top:2px;background:rgba(255,255,255,.05)">
-            <div style="font-weight:900;margin-bottom:6px">Как это будет работать позже</div>
+          <div class="card" style="background:rgba(255,255,255,.05)">
+            <div style="font-weight:950;margin-bottom:8px">Вывод (прототип)</div>
+            <div class="row">
+              <div class="field">
+                <label>Куда (ник на сервере)</label>
+                <input id="withdrawTo" placeholder="Например: KarasKiras" autocomplete="off" />
+              </div>
+              <div class="field" style="max-width: 160px">
+                <label>Сумма 🎩</label>
+                <input id="withdrawAmount" inputmode="numeric" placeholder="100" autocomplete="off" />
+              </div>
+            </div>
+            <div class="controls" style="margin-top:10px">
+              <button class="btn" id="withdrawBtn">Вывести</button>
+              <button class="btn secondary" id="withdrawHistoryBtn">История</button>
+            </div>
+            <div class="hint" style="margin-top:10px">
+              Если backend не подключён, кнопка «Вывести» создаст <b>тестовую заявку</b> (локально) и спишет баланс.
+              Когда подключишь сервер — можно сделать реальный POST на <span class="mono">/api/withdraw</span>.
+            </div>
+          </div>
+
+          <div class="card" style="background:rgba(255,255,255,.05)">
+            <div style="font-weight:950;margin-bottom:8px">Как будет в реальной версии</div>
             <div class="hint">
               1) В Mini App нажимаешь «Сгенерировать код»<br/>
               2) На сервере пишешь: <span class="mono">/tg link 123456</span><br/>
               3) Плагин привязывает Minecraft UUID к Telegram userId<br/>
-              4) После этого можно «выводить» шляпкоины в валюту сервера
+              4) После привязки вывод становится мгновенным и безопасным
             </div>
           </div>
         </div>
@@ -511,14 +627,13 @@
     </div>
 
     <nav class="nav">
-      <button class="tab" data-tab="wheel"><span class="ico"></span>Колесо</button>
-      <button class="tab active" data-tab="home"><span class="ico"></span>Дом</button>
-      <button class="tab" data-tab="withdraw"><span class="ico"></span>Вывод</button>
+      <button class="tab" data-tab="wheel"><span class="ico">🎰</span>Колесо</button>
+      <button class="tab active" data-tab="home"><span class="ico">🏠</span>Дом</button>
+      <button class="tab" data-tab="withdraw"><span class="ico">🏦</span>Вывод</button>
     </nav>
   </div>
 
   <div class="toast" id="toast">+2</div>
-
   <input type="file" id="skinFile" accept="image/png" hidden />
 
   <script>
@@ -529,8 +644,16 @@
       tg?.expand();
     } catch {}
 
-    // ===== State (local prototype) =====
-    const LS_KEY = "shlyapcoin_proto_v1";
+    function haptic(type="impact", style="light"){
+      try{
+        if (!tg?.HapticFeedback) return;
+        if (type === "impact") tg.HapticFeedback.impactOccurred(style);
+        else if (type === "notify") tg.HapticFeedback.notificationOccurred(style); // "success" | "warning" | "error"
+      }catch{}
+    }
+
+    // ===== State (prototype) =====
+    const LS_KEY = "shlyapcoin_proto_v3";
     const state = loadState();
 
     const $ = (id) => document.getElementById(id);
@@ -541,23 +664,48 @@
     const toast = $("toast");
 
     // ===== 3D Viewer =====
-    let viewer;
-    initViewer();
+    let viewer = null;
+    let autoRotate = false;
+
+    waitForSkinview3d().then(() => {
+      initViewer();
+      hydrateUI();
+    });
+
+    async function waitForSkinview3d(){
+      const start = Date.now();
+      while(!window.skinview3d){
+        if (window.__skinview3d_failed) break;
+        if (Date.now() - start > 6000) break;
+        await new Promise(r => setTimeout(r, 50));
+      }
+      if (!window.skinview3d){
+        $("skinStatus").textContent = "Не удалось загрузить 3D-библиотеку (skinview3d). Проверь интернет или попробуй позже.";
+      }
+    }
 
     function initViewer(){
+      if (!window.skinview3d) return;
+
       const canvas = $("skinCanvas");
       viewer = new skinview3d.SkinViewer({
         canvas,
         width: canvas.clientWidth || 300,
         height: canvas.clientHeight || 320,
-        skin: null
+        skin: null,
+        model: "auto-detect"
       });
 
-      // look & feel
       viewer.fov = 65;
       viewer.zoom = 0.95;
+      viewer.background = null;
       viewer.animation = new skinview3d.WalkingAnimation();
       viewer.animation.speed = 0.6;
+
+      // Make user rotate by finger (track control)
+      viewer.controls.enableRotate = true;
+      viewer.controls.enableZoom = true;
+      viewer.controls.enablePan = false;
 
       // Resize on window
       const ro = new ResizeObserver(() => {
@@ -566,21 +714,18 @@
       });
       ro.observe(canvas);
 
-      // If we have a saved uploaded skin, restore it.
-      // Otherwise try to restore by nickname.
+      // Restore skin
       if (state.skinDataUrl){
         viewer.loadSkin(state.skinDataUrl);
+        setSkinSource("Файл (PNG)");
+        $("skinStatus").textContent = "Скин загружен из файла (PNG).";
       } else {
         viewer.loadSkin(makePlaceholderSkinDataUrl());
-        if (state.nickname) {
-          // best-effort restore
-          setTimeout(() => loadSkinByNickname(state.nickname), 150);
-        }
+        if (state.nickname) setTimeout(() => loadSkinByNickname(state.nickname), 150);
       }
     }
 
     function makePlaceholderSkinDataUrl(){
-      // Generates a simple 64x64 PNG in-memory
       const c = document.createElement("canvas");
       c.width = 64; c.height = 64;
       const ctx = c.getContext("2d");
@@ -592,95 +737,296 @@
     }
 
     // ===== UI init =====
-    setPlayerName(state.nickname || "Игрок");
-    setBalance(state.balance || 0);
-    updateCooldownUI();
+    function hydrateUI(){
+      setPlayerName(state.nickname || "Игрок", /*silent*/true);
+      setBalance(state.balance || 0);
+      if (state.nickname) elNickInput.value = state.nickname;
+      $("bindCode").textContent = state.bindCode || "------";
+      $("withdrawTo").value = state.withdrawTo || (state.nickname || "");
+      setAutoRotate(!!state.autoRotate);
 
-    // Restore nick / auto-load skin (if user didn't upload a custom file)
-    if (state.nickname) {
-      elNickInput.value = state.nickname;
-    }
-    if (!state.skinDataUrl && state.nickname) {
-      // Small delay so viewer sizes settle
-      setTimeout(() => loadSkinByNickname(state.nickname), 150);
-    } else {
-      // If skin loaded from file or placeholder
-      try { $("skinStatus").textContent = state.skinDataUrl ? "Скин загружен из файла (PNG)." : "Введи ник и нажми «Загрузить»."; } catch {}
-      try { $("modelText").textContent = state.skinDataUrl ? "—" : "—"; } catch {}
+      updateCooldownUI();
+      wireEvents();
+      updateServerStatus();
     }
 
-    // ===== Click-to-earn =====
-    let lastTapMs = 0;
-    $("tapOverlay").addEventListener("click", () => {
-      const now = Date.now();
-      if (now - lastTapMs < 1000) return; // simple anti-spam: 1 click/sec
-      lastTapMs = now;
+    function wireEvents(){
+      // Click-to-earn
+      let lastTapMs = 0;
+      $("tapOverlay").addEventListener("click", () => {
+        const now = Date.now();
+        if (now - lastTapMs < 1000) return;
+        lastTapMs = now;
 
-      state.balance += 2;
-      saveState();
-      setBalance(state.balance);
-      showToast("+2 🎩");
-    });
+        state.balance += 2;
+        saveState();
+        setBalance(state.balance);
+        showToast("+2 🎩");
+        haptic("impact","light");
+      });
 
-    // ===== Nick load (server /api/profile if available, otherwise CDN fallback) =====
-    $("loadNickBtn").addEventListener("click", async () => {
-      const nick = (elNickInput.value || "").trim();
-      if (!nick) return showToast("Введи ник");
-      await loadSkinByNickname(nick);
-    });
+      // Load skin by nick
+      $("loadNickBtn").addEventListener("click", async () => {
+        const nick = (elNickInput.value || "").trim();
+        if (!nick) return showToast("Введи ник");
+        await loadSkinByNickname(nick);
+      });
 
-    async function loadSkinByNickname(nick){
+      // Upload skin (PNG)
+      $("uploadSkinBtn").addEventListener("click", () => $("skinFile").click());
+      $("skinFile").addEventListener("change", async (ev) => {
+        const f = ev.target.files?.[0];
+        if (!f) return;
+        if (f.type !== "image/png") return showToast("Нужен PNG");
+        const dataUrl = await fileToDataUrl(f);
+
+        state.skinDataUrl = dataUrl;
+        state.skinCache = null;
+        saveState();
+
+        if (viewer) viewer.loadSkin(dataUrl);
+        setSkinSource("Файл (PNG)");
+        $("skinStatus").textContent = "Скин загружен из файла (PNG).";
+        showToast("Ок!");
+        haptic("notify","success");
+        ev.target.value = "";
+      });
+
+      // Refresh skin
+      $("refreshSkinBtn").addEventListener("click", async () => {
+        if (state.skinDataUrl){
+          showToast("Это PNG-скин");
+          return;
+        }
+        const nick = (state.nickname || "").trim();
+        if (!nick) return showToast("Нет ника");
+        state.skinCache = null; // drop cache
+        saveState();
+        await loadSkinByNickname(nick, { force: true });
+      });
+
+      // Auto rotate
+      $("toggleRotateBtn").addEventListener("click", () => setAutoRotate(!autoRotate));
+
+      // Reset
+      $("resetBtn").addEventListener("click", () => {
+        localStorage.removeItem(LS_KEY);
+        location.reload();
+      });
+
+      // Wheel: button + drag
+      $("spinBtn").addEventListener("click", () => spinWheelRandom());
+      $("spinInfoBtn").addEventListener("click", () => showSpinChances());
+      setupWheelDrag();
+
+      // Withdraw bind code
+      $("genCodeBtn").addEventListener("click", () => {
+        const code = String(Math.floor(100000 + Math.random()*900000));
+        state.bindCode = code;
+        saveState();
+        $("bindCode").textContent = code;
+        showToast("Код готов");
+        haptic("impact","medium");
+      });
+
+      $("copyCodeBtn").addEventListener("click", async () => {
+        const code = state.bindCode || "------";
+        try{
+          await navigator.clipboard.writeText(code);
+          showToast("Скопировано");
+          haptic("notify","success");
+        }catch{
+          showToast("Не смог скопировать");
+          haptic("notify","warning");
+        }
+      });
+
+      // Withdraw
+      $("withdrawBtn").addEventListener("click", async () => {
+        const to = ($("withdrawTo").value || "").trim();
+        const amount = parseInt(($("withdrawAmount").value || "").trim(), 10);
+
+        if (!to) return showToast("Куда выводить?");
+        if (!Number.isFinite(amount) || amount <= 0) return showToast("Сумма?");
+        if (amount > state.balance) return showToast("Не хватает 🎩");
+
+        state.withdrawTo = to;
+        saveState();
+
+        // Try backend first
+        const ok = await tryServerWithdraw({ to, amount });
+        if (ok) return;
+
+        // Local prototype
+        state.balance -= amount;
+        state.withdrawals.unshift({
+          id: cryptoRandomId(),
+          to,
+          amount,
+          ts: Date.now(),
+          status: "pending"
+        });
+        saveState();
+        setBalance(state.balance);
+
+        showToast("Заявка создана");
+        haptic("notify","success");
+      });
+
+      $("withdrawHistoryBtn").addEventListener("click", () => {
+        showWithdrawHistory();
+      });
+
+      // Navigation
+      const tabs = Array.from(document.querySelectorAll(".tab"));
+      tabs.forEach(btn => btn.addEventListener("click", () => {
+        const target = btn.dataset.tab;
+        setTab(target);
+      }));
+    }
+
+    // ===== Skin loading (Mojang / backend / fallback) =====
+    async function loadSkinByNickname(nick, opts = {}){
       setPlayerName(nick);
 
       const status = $("skinStatus");
-      const modelText = $("modelText");
       status.textContent = "Загружаю скин…";
-      modelText.textContent = "…";
+      $("modelText").textContent = "…";
+      setSkinSource("…");
 
-      // 1) Try local backend first (best option: same-origin, no CORS issues)
+      // If user previously uploaded a PNG, switch back to nickname mode
+      state.skinDataUrl = "";
+      saveState();
+
+      // 0) cache (10 minutes) to avoid rate limits
+      const cacheKey = nick.toLowerCase();
+      const cached = state.skinCache?.[cacheKey];
+      const cacheOk = cached && !opts.force && (Date.now() - cached.ts < 10 * 60 * 1000);
+      if (cacheOk){
+        applyResolvedSkin(cached.resolved, { cached: true });
+        return;
+      }
+
+      // 1) Local backend (same-origin)
       try{
         const apiUrl = `/api/profile?name=${encodeURIComponent(nick)}`;
-        const r = await fetchWithTimeout(apiUrl, 2000);
+        const r = await fetchWithTimeout(apiUrl, 2200);
+        if (!r.ok) throw new Error("backend not ok");
         const j = await r.json();
         if (!j.ok) throw new Error(j.error || "Ошибка");
 
-        const prettyModel = j.model === "slim" ? "Slim (Alex)" : "Wide (Steve)";
-        modelText.textContent = prettyModel;
-        status.textContent = `Скин: ${j.name} • ${prettyModel} (через /api/profile)`;
+        const resolved = {
+          name: j.name || nick,
+          model: j.model || "auto",
+          skinUrl: j.skinProxyUrl || j.skinUrl || null,
+          source: "/api/profile"
+        };
 
-        // Add cache-buster so skin updates reflect
-        const skinUrl = `${j.skinProxyUrl}&v=${Date.now()}`;
-        viewer.loadSkin(skinUrl);
+        if (!resolved.skinUrl) throw new Error("no skin url");
+        applyResolvedSkin(resolved);
 
-        state.nickname = j.name;
-        saveState();
-        showToast("Скин загружен");
+        rememberCache(cacheKey, resolved);
         return;
       }catch(e){
-        // Ignore: we will try CDN fallback
-        console.warn("/api/profile unavailable, falling back to CDN", e);
+        console.warn("backend /api/profile unavailable", e);
       }
 
-      // 2) CDN fallback (works without running server.js)
+      // 2) Mojang official (uuid + sessionserver textures)
       try{
-        // Minotar returns a valid Minecraft skin PNG by nickname.
-        // Note: If a browser blocks cross-origin textures, run this page via any HTTP server.
-        const skinUrl = `https://minotar.net/skin/${encodeURIComponent(nick)}.png?v=${Date.now()}`;
-        viewer.loadSkin(skinUrl);
-
-        modelText.textContent = "—";
-        status.textContent = `Скин: ${nick} (через CDN)`;
-
-        state.nickname = nick;
-        state.skinDataUrl = ""; // clear custom upload if user switched to nickname
-        saveState();
-        showToast("Скин загружен");
+        const resolved = await resolveSkinViaMojang(nick);
+        applyResolvedSkin(resolved);
+        rememberCache(cacheKey, resolved);
+        return;
       }catch(e){
-        console.warn(e);
-        status.textContent = "Не смог загрузить по нику. Попробуй открыть файл через хостинг (http) или загрузить PNG.";
-        modelText.textContent = "—";
-        showToast("Не вышло 😅");
+        console.warn("Mojang resolve failed", e);
       }
+
+      // 3) Fallback CDN (username-based)
+      try{
+        const url = `https://minotar.net/skin/${encodeURIComponent(nick)}.png?v=${Date.now()}`;
+        const resolved = { name: nick, model: "auto", skinUrl: url, source: "Minotar (fallback)" };
+        applyResolvedSkin(resolved);
+        rememberCache(cacheKey, resolved);
+        return;
+      }catch(e){
+        console.warn("Minotar failed", e);
+      }
+
+      status.textContent = "Не смог загрузить скин. Попробуй другой ник или загрузи PNG.";
+      $("modelText").textContent = "—";
+      setSkinSource("—");
+      showToast("Не вышло 😅");
+      haptic("notify","error");
+    }
+
+    async function resolveSkinViaMojang(name){
+      // 1) username -> uuid
+      const profile = await fetchJsonWithTimeout(`https://api.mojang.com/users/profiles/minecraft/${encodeURIComponent(name)}`, 3500);
+      if (!profile?.id) throw new Error("no uuid");
+      const uuid = profile.id; // no dashes
+
+      // 2) uuid -> textures (signed base64)
+      try{
+        const sess = await fetchJsonWithTimeout(`https://sessionserver.mojang.com/session/minecraft/profile/${uuid}?unsigned=false`, 3500);
+        const prop = (sess?.properties || []).find(p => p?.name === "textures");
+        if (!prop?.value) throw new Error("no textures");
+        const decoded = JSON.parse(atob(prop.value));
+
+        const skin = decoded?.textures?.SKIN;
+        const skinUrlRaw = skin?.url;
+        if (!skinUrlRaw) throw new Error("no skin url");
+        // The SessionServer sometimes returns http URLs; force https for the browser.
+        const skinUrl = String(skinUrlRaw).replace(/^http:/, "https:");
+
+        const model = skin?.metadata?.model === "slim" ? "slim" : "default";
+        return {
+          name: profile.name || name,
+          model,
+          skinUrl,
+          source: "Mojang SessionServer"
+        };
+      }catch(e){
+        // Fallback: Crafatar serves skins by UUID with CORS enabled (good for WebGL textures)
+        return {
+          name: profile.name || name,
+          model: "auto",
+          skinUrl: `https://crafatar.com/skins/${uuid}?v=${Date.now()}`,
+          source: "Crafatar (fallback)"
+        };
+      }
+    }
+
+    function applyResolvedSkin(resolved, meta = {}){
+      if (viewer) viewer.loadSkin(resolved.skinUrl + (resolved.skinUrl.includes("?") ? "&" : "?") + "v=" + Date.now());
+
+      $("modelText").textContent = resolved.model === "slim" ? "Slim (Alex)" :
+                                 (resolved.model === "default" ? "Wide (Steve)" : "Auto");
+      setSkinSource(resolved.source || "—");
+
+      $("skinStatus").textContent =
+        (meta.cached ? "✅ (кэш) " : "✅ ") +
+        `Скин: ${resolved.name} • источник: ${resolved.source}.`;
+
+      showToast("Скин загружен");
+      haptic("notify","success");
+    }
+
+    function rememberCache(key, resolved){
+      state.skinCache = state.skinCache || {};
+      state.skinCache[key] = { ts: Date.now(), resolved };
+      saveState();
+    }
+
+    function setSkinSource(text){
+      $("skinSource").textContent = text;
+    }
+
+    function setAutoRotate(on){
+      autoRotate = !!on;
+      state.autoRotate = autoRotate;
+      saveState();
+      if (viewer) viewer.autoRotate = autoRotate;
+      $("toggleRotateBtn").textContent = "Авто-поворот: " + (autoRotate ? "вкл" : "выкл");
     }
 
     function fetchWithTimeout(url, ms){
@@ -689,19 +1035,11 @@
       return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(t));
     }
 
-    // ===== Upload skin (PNG) =====
-    $("uploadSkinBtn").addEventListener("click", () => $("skinFile").click());
-    $("skinFile").addEventListener("change", async (ev) => {
-      const f = ev.target.files?.[0];
-      if (!f) return;
-      if (f.type !== "image/png") return showToast("Нужен PNG");
-      const dataUrl = await fileToDataUrl(f);
-      state.skinDataUrl = dataUrl;
-      saveState();
-      viewer.loadSkin(dataUrl);
-      showToast("Ок!");
-      ev.target.value = "";
-    });
+    async function fetchJsonWithTimeout(url, ms){
+      const r = await fetchWithTimeout(url, ms);
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return await r.json();
+    }
 
     function fileToDataUrl(file){
       return new Promise((resolve, reject) => {
@@ -712,112 +1050,157 @@
       });
     }
 
-    // ===== Reset =====
-    $("resetBtn").addEventListener("click", () => {
-      localStorage.removeItem(LS_KEY);
-      location.reload();
-    });
-
-    // ===== Wheel =====
+    // ===== Wheel (drag + cooldown + deterministic sectors) =====
     const SPIN_CD_MS = 12 * 60 * 60 * 1000;
+    const wheelEl = $("wheel");
+    const wheelLabel = $("wheelLabel");
+
+    // 8 sectors (each 45deg). Feel free to change.
+    const SECTORS = [
+      { prize: 10,  label: "+10"  },
+      { prize: 25,  label: "+25"  },
+      { prize: 50,  label: "+50"  },
+      { prize: 0,   label: "0"    },
+      { prize: 10,  label: "+10"  },
+      { prize: 25,  label: "+25"  },
+      { prize: 100, label: "+100" },
+      { prize: 50,  label: "+50"  }
+    ];
+    const SEG = 360 / SECTORS.length;
+
     let spinning = false;
+    let wheelRot = Number(state.wheelRot || 0); // degrees
+    setWheelRotation(wheelRot);
 
-    $("spinBtn").addEventListener("click", () => {
-      if (spinning) return;
+    function canSpinNow(){
       const now = Date.now();
-      const left = (state.lastSpinMs + SPIN_CD_MS) - now;
-      if (left > 0) {
-        showToast("Ещё рано 😄");
-        return;
-      }
-
-      // Prize table (простая)
-      const prize = rollPrize();
-      state.balance += prize;
-      state.lastSpinMs = now;
-      saveState();
-      setBalance(state.balance);
-
-      spinAnim(prize);
-    });
-
-    function rollPrize(){
-      // Шансы можно легко менять:
-      // 0-59: 10
-      // 60-84: 25
-      // 85-94: 50
-      // 95-98: 100
-      // 99: 0
-      const r = Math.floor(Math.random()*100);
-      if (r <= 59) return 10;
-      if (r <= 84) return 25;
-      if (r <= 94) return 50;
-      if (r <= 98) return 100;
-      return 0;
+      return (state.lastSpinMs + SPIN_CD_MS) - now <= 0;
     }
 
-    function spinAnim(prize){
+    function showSpinChances(){
+      // This wheel is sector-based; "chances" are uniform per sector (8 sectors).
+      const parts = SECTORS.map((s, i) => `${i+1}) ${s.label} 🎩`).join("\\n");
+      alert("Сектора колеса (равновероятно):\\n\\n" + parts + "\\n\\nКрути пальцем или кнопкой.");
+    }
+
+    function spinWheelRandom(){
+      if (spinning) return;
+      if (!canSpinNow()) return showToast("Ещё рано 😄");
+
+      // random extra spins + random landing
+      const extra = 360 * (6 + Math.random()*3) + Math.random()*360;
+      spinTo(wheelRot + extra);
+    }
+
+    function setupWheelDrag(){
+      let down = false;
+      let lastA = 0;
+      let lastT = 0;
+      let vel = 0;
+
+      function angleFromEvent(ev){
+        const rect = wheelEl.getBoundingClientRect();
+        const cx = rect.left + rect.width/2;
+        const cy = rect.top + rect.height/2;
+        const x = (ev.clientX - cx);
+        const y = (ev.clientY - cy);
+        // atan2 gives angle from x-axis; we want 0 at top
+        const a = Math.atan2(y, x) * 180 / Math.PI; // -180..180, 0 at right
+        return a + 90; // 0 at top
+      }
+
+      wheelEl.addEventListener("pointerdown", (ev) => {
+        if (spinning) return;
+        if (!canSpinNow()) { showToast("КД 😄"); return; }
+        down = true;
+        wheelEl.setPointerCapture(ev.pointerId);
+        lastA = angleFromEvent(ev);
+        lastT = performance.now();
+        vel = 0;
+        wheelLabel.textContent = "Крути… отпусти чтобы запустить";
+      });
+
+      wheelEl.addEventListener("pointermove", (ev) => {
+        if (!down || spinning) return;
+        const a = angleFromEvent(ev);
+        const now = performance.now();
+        let da = a - lastA;
+        // normalize jump across 180 -> -180
+        if (da > 180) da -= 360;
+        if (da < -180) da += 360;
+
+        wheelRot += da;
+        setWheelRotation(wheelRot);
+
+        const dt = Math.max(16, now - lastT);
+        vel = (da / dt) * 16; // deg per ~frame
+        lastA = a;
+        lastT = now;
+      });
+
+      function end(){
+        if (!down || spinning) return;
+        down = false;
+
+        // convert velocity to spin power
+        const power = Math.max(0.8, Math.min(4.2, Math.abs(vel)));
+        const extra = 360 * (3 + power*2) + Math.random()*120;
+
+        // direction depends on last velocity sign; if tiny, random
+        const dir = (vel === 0) ? (Math.random() > 0.5 ? 1 : -1) : Math.sign(vel);
+        wheelLabel.textContent = "Вращаем…";
+        spinTo(wheelRot + extra * dir);
+      }
+
+      wheelEl.addEventListener("pointerup", end);
+      wheelEl.addEventListener("pointercancel", end);
+      wheelEl.addEventListener("pointerleave", () => { /* ignore */ });
+    }
+
+    function setWheelRotation(deg){
+      wheelRot = deg;
+      wheelEl.style.transition = "transform 0s";
+      wheelEl.style.transform = `rotate(${wheelRot}deg)`;
+      state.wheelRot = wheelRot;
+      saveState();
+    }
+
+    function spinTo(targetDeg){
       spinning = true;
-      const wheel = $("wheel");
-      const turns = 6 + Math.random()*3;
-      const deg = turns * 360 + (Math.random()*360);
-      wheel.style.transition = "transform 1.8s cubic-bezier(.12,.76,.18,1)";
-      wheel.style.transform = `rotate(${deg}deg)`;
+      wheelEl.style.transition = "transform 2.2s cubic-bezier(.10,.78,.16,1)";
+      wheelEl.style.transform = `rotate(${targetDeg}deg)`;
+
+      // lock in final rotation
+      const start = wheelRot;
+      wheelRot = targetDeg;
+
       setTimeout(() => {
         spinning = false;
-        showToast(prize === 0 ? "0 😭" : `+${prize} 🎩`);
+        state.lastSpinMs = Date.now();
+
+        const prize = prizeFromRotation(wheelRot);
+        state.balance += prize;
+        saveState();
+
+        setBalance(state.balance);
         updateCooldownUI();
-      }, 1850);
+
+        wheelLabel.textContent = prize === 0 ? "0 😭" : `+${prize} 🎩`;
+        showToast(prize === 0 ? "0 😭" : `+${prize} 🎩`);
+        haptic("impact","heavy");
+
+        // settle without transition
+        setTimeout(() => setWheelRotation(wheelRot), 80);
+      }, 2250);
     }
 
-    // ===== Withdraw: bind code =====
-    $("genCodeBtn").addEventListener("click", () => {
-      const code = String(Math.floor(100000 + Math.random()*900000));
-      state.bindCode = code;
-      saveState();
-      $("bindCode").textContent = code;
-      showToast("Код готов");
-    });
-
-    $("copyCodeBtn").addEventListener("click", async () => {
-      const code = state.bindCode || "------";
-      try{
-        await navigator.clipboard.writeText(code);
-        showToast("Скопировано");
-      }catch{
-        showToast("Не смог скопировать");
-      }
-    });
-
-    $("bindCode").textContent = state.bindCode || "------";
-
-    // ===== Navigation =====
-    const tabs = Array.from(document.querySelectorAll(".tab"));
-    tabs.forEach(btn => btn.addEventListener("click", () => {
-      const target = btn.dataset.tab;
-      setTab(target);
-    }));
-
-    function setTab(name){
-      tabs.forEach(b => b.classList.toggle("active", b.dataset.tab === name));
-      document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
-      $("page-" + name).classList.add("active");
-      if (name === "wheel") updateCooldownUI();
-    }
-
-    // ===== Helpers =====
-    function setBalance(v){
-      elBalance.textContent = String(v);
-    }
-    function setPlayerName(nick){
-      elPlayer.textContent = nick;
-      state.nickname = nick;
-      saveState();
-    }
-    function showToast(text){
-      toast.textContent = text;
-      toast.classList.add("show");
-      setTimeout(() => toast.classList.remove("show"), 950);
+    function prizeFromRotation(rotDeg){
+      // needle at top. wheel rotation clockwise positive.
+      // We need the sector under needle:
+      const a = ((rotDeg % 360) + 360) % 360; // 0..359
+      const underNeedle = (360 - a) % 360; // invert
+      const idx = Math.floor(underNeedle / SEG) % SECTORS.length;
+      return SECTORS[idx].prize;
     }
 
     function updateCooldownUI(){
@@ -827,7 +1210,7 @@
       if (left <= 0){
         el.textContent = "Можно крутить!";
         $("spinBtn").disabled = false;
-        $("spinBtn").style.opacity = "1";
+        wheelLabel.textContent = "Свайпни по колесу, чтобы крутануть";
         return;
       }
       const hh = Math.floor(left / 3600000);
@@ -835,25 +1218,167 @@
       const ss = Math.floor((left % 60000) / 1000);
       el.textContent = `Осталось: ${String(hh).padStart(2,"0")}:${String(mm).padStart(2,"0")}:${String(ss).padStart(2,"0")}`;
       $("spinBtn").disabled = true;
-      $("spinBtn").style.opacity = ".65";
       setTimeout(updateCooldownUI, 1000);
+    }
+
+    // ===== Withdraw: backend-first, local fallback =====
+    async function updateServerStatus(){
+      // quick ping (optional)
+      try{
+        const r = await fetchWithTimeout("/api/ping", 900);
+        if (r.ok){
+          $("serverStatus").textContent = "ONLINE";
+          return;
+        }
+      }catch{}
+      $("serverStatus").textContent = "ТЕСТ / OFFLINE";
+    }
+
+    async function tryServerWithdraw(payload){
+      // Optional backend: implement POST /api/withdraw -> { ok:true, balance?:number } (or { ok:false, error:"..." })
+      try{
+        const controller = new AbortController();
+        const t = setTimeout(() => controller.abort(), 3000);
+
+        const r = await fetch("/api/withdraw", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          signal: controller.signal
+        }).finally(() => clearTimeout(t));
+
+        // If there is no backend (GitHub Pages), it will usually be 404.
+        if (r.status === 404 || r.status === 405) return false;
+
+        let j = null;
+        try { j = await r.json(); } catch { j = null; }
+
+        if (!r.ok){
+          showToast((j && j.error) ? j.error : ("Ошибка вывода (" + r.status + ")"));
+          haptic("notify", "error");
+          return true; // request handled by server response; do not fall back locally
+        }
+
+        if (j && j.ok === false){
+          showToast(j.error || "Ошибка вывода");
+          haptic("notify", "error");
+          return true;
+        }
+
+        // Success
+        if (j && Number.isFinite(j.balance)){
+          state.balance = Number(j.balance);
+          saveState();
+          setBalance(state.balance);
+        }
+
+        state.withdrawals.unshift({
+          id: cryptoRandomId(),
+          to: payload.to,
+          amount: payload.amount,
+          ts: Date.now(),
+          status: "done"
+        });
+        saveState();
+
+        showToast("Выведено ✅");
+        haptic("notify", "success");
+        return true;
+      }catch(e){
+        return false; // network/offline -> allow local fallback
+      }
+    }
+
+    function showWithdrawHistory(){
+      const list = state.withdrawals || [];
+      if (!list.length){
+        alert("История пустая.");
+        return;
+      }
+      const lines = list.slice(0, 10).map(w => {
+        const d = new Date(w.ts);
+        const t = d.toLocaleString();
+        const st = w.status === "done" ? "✅" : (w.status === "failed" ? "❌" : "⏳");
+        return `${st} ${w.amount} 🎩 -> ${w.to} (${t})`;
+      });
+      alert("Последние заявки:\\n\\n" + lines.join("\\n"));
+    }
+
+    // ===== Navigation =====
+    const tabs = Array.from(document.querySelectorAll(".tab"));
+    function setTab(name){
+      tabs.forEach(b => b.classList.toggle("active", b.dataset.tab === name));
+      document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+      const el = $("page-" + name);
+      if (el) el.classList.add("active");
+      if (name === "wheel") updateCooldownUI();
+    }
+
+    // ===== Helpers =====
+    function setBalance(v){ elBalance.textContent = String(v); }
+
+    function setPlayerName(nick, silent=false){
+      elPlayer.textContent = nick;
+      if (!silent){
+        state.nickname = nick;
+        saveState();
+      } else {
+        state.nickname = nick;
+        saveState();
+      }
+    }
+
+    function showToast(text){
+      toast.textContent = text;
+      toast.classList.add("show");
+      setTimeout(() => toast.classList.remove("show"), 950);
+    }
+
+    function cryptoRandomId(){
+      try{
+        const a = new Uint8Array(8);
+        crypto.getRandomValues(a);
+        return Array.from(a).map(x => x.toString(16).padStart(2,"0")).join("");
+      }catch{
+        return String(Math.random()).slice(2);
+      }
     }
 
     function loadState(){
       try{
         const raw = localStorage.getItem(LS_KEY);
-        if (!raw) return { balance: 0, nickname: "", skinDataUrl: "", lastSpinMs: 0, bindCode: "" };
+        if (!raw) return freshState();
         const s = JSON.parse(raw);
         return {
           balance: Number(s.balance || 0),
           nickname: String(s.nickname || ""),
           skinDataUrl: String(s.skinDataUrl || ""),
           lastSpinMs: Number(s.lastSpinMs || 0),
-          bindCode: String(s.bindCode || "")
+          bindCode: String(s.bindCode || ""),
+          withdrawTo: String(s.withdrawTo || ""),
+          withdrawals: Array.isArray(s.withdrawals) ? s.withdrawals : [],
+          wheelRot: Number(s.wheelRot || 0),
+          skinCache: s.skinCache || null,
+          autoRotate: !!s.autoRotate
         };
       }catch{
-        return { balance: 0, nickname: "", skinDataUrl: "", lastSpinMs: 0, bindCode: "" };
+        return freshState();
       }
+    }
+
+    function freshState(){
+      return {
+        balance: 0,
+        nickname: "",
+        skinDataUrl: "",
+        lastSpinMs: 0,
+        bindCode: "",
+        withdrawTo: "",
+        withdrawals: [],
+        wheelRot: 0,
+        skinCache: null,
+        autoRotate: false
+      };
     }
 
     function saveState(){
